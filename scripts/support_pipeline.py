@@ -127,6 +127,7 @@ def handle_query(query: str) -> dict:
     return {
         "query": query,
         "intent": intent,
+        "context": context,
         "answer": answer,
         "trace_id": trace_id,
         "elapsed_seconds": elapsed,
