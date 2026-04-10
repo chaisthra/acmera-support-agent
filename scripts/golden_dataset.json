@@ -293,7 +293,7 @@
     "id": "b30",
     "query": "I bought a phone during Christmas sale on December 20 — can I return it in February?",
     "expected_intent": "return_or_refund",
-    "expected_answer": "Yes. Items purchased between November 15 and December 31 have an extended holiday return window until January 31 of the following year. However, a February return would fall outside this extended window. Unless you are a Premium member with an extended window of 45 or 60 days that covers that date, the return would not be eligible.",
+    "expected_answer": "No. The holiday extended return window for items bought between November 15 and December 31 closes on January 31. A February return falls outside that window. It would only be eligible if the customer is a Premium Silver member (45-day window from Dec 20 = Feb 3) or Premium Gold (60-day window = Feb 18), and the return date falls within their tier's window.",
     "expected_source": "01_return_policy.md",
     "expected_escalation": false,
     "difficulty": "hard",

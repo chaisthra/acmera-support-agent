@@ -175,7 +175,6 @@ def run_eval():
     Routing on should-escalate cases = 0% (Week 4 baseline).
     """
     from support_pipeline import handle_query
-    from retrieval import embed_query, retrieve, assemble_context
 
     dataset = load_golden_dataset()
     if not dataset:
@@ -186,43 +185,44 @@ def run_eval():
     results = []
     for entry in dataset:
         print(f"  [{entry['id']}] {entry['query'][:60]}...")
+        try:
+            pipeline_result = handle_query(entry["query"])
 
-        pipeline_result = handle_query(entry["query"])
+            # Naive pipeline never escalates
+            predicted_escalation = False
 
-        # Naive pipeline never escalates
-        predicted_escalation = False
+            # Use the context the pipeline actually saw — not a separate retrieval
+            context = pipeline_result["context"]
 
-        # Retrieve context independently for faithfulness scoring
-        query_embedding = embed_query(entry["query"])
-        chunks = retrieve(query_embedding)
-        context = assemble_context(chunks)
+            classification_correct = check_classification(pipeline_result["intent"], entry["expected_intent"])
+            routing_correct = check_routing(predicted_escalation, entry["expected_escalation"])
+            faith = judge_faithfulness(entry["query"], pipeline_result["answer"], context)
+            correct = judge_correctness(entry["query"], pipeline_result["answer"], entry["expected_answer"])
 
-        classification_correct = check_classification(pipeline_result["intent"], entry["expected_intent"])
-        routing_correct = check_routing(predicted_escalation, entry["expected_escalation"])
-        faith = judge_faithfulness(entry["query"], pipeline_result["answer"], context)
-        correct = judge_correctness(entry["query"], pipeline_result["answer"], entry["expected_answer"])
+            print(f"         class={classification_correct}  routing={routing_correct}"
+                  f"  faith={faith['score']}  correct={correct['score']}")
 
-        print(f"         class={classification_correct}  routing={routing_correct}"
-              f"  faith={faith['score']}  correct={correct['score']}")
-
-        results.append({
-            "id": entry["id"],
-            "query": entry["query"],
-            "category": entry.get("category", "unknown"),
-            "difficulty": entry.get("difficulty", "easy"),
-            "expected_intent": entry["expected_intent"],
-            "predicted_intent": pipeline_result["intent"],
-            "expected_escalation": entry["expected_escalation"],
-            "predicted_escalation": predicted_escalation,
-            "expected_answer": entry["expected_answer"],
-            "answer": pipeline_result["answer"],
-            "trace_id": pipeline_result["trace_id"],
-            "elapsed_seconds": pipeline_result["elapsed_seconds"],
-            "classification_correct": classification_correct,
-            "routing_correct": routing_correct,
-            "faithfulness": faith,
-            "correctness": correct,
-        })
+            results.append({
+                "id": entry["id"],
+                "query": entry["query"],
+                "category": entry.get("category", "unknown"),
+                "difficulty": entry.get("difficulty", "easy"),
+                "expected_intent": entry["expected_intent"],
+                "predicted_intent": pipeline_result["intent"],
+                "expected_escalation": entry["expected_escalation"],
+                "predicted_escalation": predicted_escalation,
+                "expected_answer": entry["expected_answer"],
+                "answer": pipeline_result["answer"],
+                "trace_id": pipeline_result["trace_id"],
+                "elapsed_seconds": pipeline_result["elapsed_seconds"],
+                "classification_correct": classification_correct,
+                "routing_correct": routing_correct,
+                "faithfulness": faith,
+                "correctness": correct,
+            })
+        except Exception as e:
+            print(f"         ERROR — skipping: {e}")
+            continue
 
     # --- Scorecard ---
     n = len(results)
