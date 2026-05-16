@@ -1,0 +1,12 @@
+{
+  "saved_at": "2026-05-16T09:22:31.512706Z",
+  "n": 32,
+  "classification_acc": 0.7188,
+  "retrieval_hit_rate": 0.6562,
+  "routing_overall": 0.6562,
+  "routing_correct_handle": 1.0,
+  "routing_missed_esc_caught": 0.0,
+  "avg_faithfulness": 4.75,
+  "avg_correctness": 3.875,
+  "note": "Naive pipeline baseline \u2014 Week 4 target: improve routing_missed_esc_caught to >0%"
+}
