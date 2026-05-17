@@ -29,6 +29,23 @@ litellm.set_verbose = False
 
 langfuse = Langfuse()
 
+
+def _init_redis_cache() -> None:
+    host = os.getenv("REDIS_HOST")
+    if not host:
+        return
+    try:
+        litellm.cache = litellm.Cache(
+            type="redis",
+            host=host,
+            port=int(os.getenv("REDIS_PORT", 6379)),
+        )
+    except Exception:
+        pass
+
+
+_init_redis_cache()
+
 PRIMARY_MODEL  = "gpt-4o-mini"
 FALLBACK_MODEL = "gpt-3.5-turbo"
 

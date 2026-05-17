@@ -39,6 +39,31 @@ langfuse = Langfuse()
 LOGS_DIR = os.path.join(os.path.dirname(__file__), "..", "logs")
 
 
+def _init_redis_cache() -> None:
+    """
+    Wire LiteLLM to Redis at agent import time so caching is active whether
+    the agent is called via app.py or run directly (python scripts/agent.py).
+
+    Caches all temperature=0 LLM calls: classify_node, evaluate_node, respond_node.
+    No-ops silently if REDIS_HOST is not set.
+    """
+    host = os.getenv("REDIS_HOST")
+    if not host:
+        return
+    try:
+        litellm.cache = litellm.Cache(
+            type="redis",
+            host=host,
+            port=int(os.getenv("REDIS_PORT", 6379)),
+        )
+        print(f"[agent] LiteLLM cache → Redis {host}:{os.getenv('REDIS_PORT', 6379)}")
+    except Exception as e:
+        print(f"[agent] Redis cache setup skipped: {e}")
+
+
+_init_redis_cache()
+
+
 # ---------------------------------------------------------------------------
 # State
 # ---------------------------------------------------------------------------
