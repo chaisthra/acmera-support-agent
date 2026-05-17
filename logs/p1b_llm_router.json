@@ -1,0 +1,100 @@
+{
+  "compare_rows": [
+    {
+      "query": "What is the return window for electronics?",
+      "regex_score": 2,
+      "regex_model": "gpt-4o-mini",
+      "llm_score": 1,
+      "llm_model": "gpt-4o-mini",
+      "agree": true,
+      "reason": "pure fact lookup, no input to evaluate"
+    },
+    {
+      "query": "What payment methods does Acmera accept?",
+      "regex_score": 1,
+      "regex_model": "gpt-4o-mini",
+      "llm_score": 1,
+      "llm_model": "gpt-4o-mini",
+      "agree": true,
+      "reason": "pure fact lookup, no input to evaluate"
+    },
+    {
+      "query": "How do I track my order?",
+      "regex_score": 1,
+      "regex_model": "gpt-4o-mini",
+      "llm_score": 1,
+      "llm_model": "gpt-4o-mini",
+      "agree": true,
+      "reason": "pure fact lookup, no input to evaluate"
+    },
+    {
+      "query": "What is the standard warranty on Acmera products?",
+      "regex_score": 1,
+      "regex_model": "gpt-4o-mini",
+      "llm_score": 1,
+      "llm_model": "gpt-4o-mini",
+      "agree": true,
+      "reason": "pure fact lookup, no input to evaluate"
+    },
+    {
+      "query": "How do I become a Premium Silver member?",
+      "regex_score": 2,
+      "regex_model": "gpt-4o-mini",
+      "llm_score": 1,
+      "llm_model": "gpt-4o-mini",
+      "agree": true,
+      "reason": "pure fact lookup, no input to evaluate"
+    },
+    {
+      "query": "What is the difference between Premium Gold and Premium Silver benefits?",
+      "regex_score": 4,
+      "regex_model": "gpt-4o",
+      "llm_score": 1,
+      "llm_model": "gpt-4o-mini",
+      "agree": false,
+      "reason": "pure fact lookup, no input to evaluate"
+    },
+    {
+      "query": "I placed a corporate bulk order of 50 units \u2014 what are my return options?",
+      "regex_score": 4,
+      "regex_model": "gpt-4o",
+      "llm_score": 3,
+      "llm_model": "gpt-4o-mini",
+      "agree": false,
+      "reason": "tier-specific return policy for bulk orders and quantity of units"
+    },
+    {
+      "query": "I bought a laptop during the Diwali flash sale, can I return it after 30 days?",
+      "regex_score": 4,
+      "regex_model": "gpt-4o",
+      "llm_score": 4,
+      "llm_model": "gpt-4o",
+      "agree": true,
+      "reason": "promotional window + tier window + date"
+    },
+    {
+      "query": "As a Premium Gold member, do I get a different return window for promotional items?",
+      "regex_score": 4,
+      "regex_model": "gpt-4o",
+      "llm_score": 2,
+      "llm_model": "gpt-4o-mini",
+      "agree": false,
+      "reason": "1 condition (tier rule vs promotional item return policy)"
+    },
+    {
+      "query": "What is the difference between Acmera Shield and Acmera Shield Plus warranty plans?",
+      "regex_score": 4,
+      "regex_model": "gpt-4o",
+      "llm_score": 1,
+      "llm_model": "gpt-4o-mini",
+      "agree": false,
+      "reason": "pure fact lookup, no input to evaluate"
+    }
+  ],
+  "cost": {
+    "no_routing_day": 25.0,
+    "with_routing_day": 9.8,
+    "saving_day": 15.2,
+    "saving_month": 456.0
+  }
+}

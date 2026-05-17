@@ -43,13 +43,20 @@ def _classify_intent(query: str) -> str:
         fallbacks=["gpt-3.5-turbo"],
         temperature=0,
         messages=[
-            {"role": "system", "content": (
-                f"Classify this customer query into exactly one category. "
-                f"Respond with ONLY the category name.\n"
-                f"Categories: {', '.join(INTENTS)}"
-            )},
-            {"role": "user", "content": query},
-        ],
+    {"role": "system", "content": (
+        "Classify this customer query into exactly one category.\n"
+        "Respond with ONLY the category name, nothing else.\n\n"
+        "Categories:\n"
+        "- return_or_refund: customer wants to return an item or get a refund\n"
+        "- order_status: asking about order tracking, shipping, delivery, or a specific order ID\n"
+        "- billing_or_payment: payment issues, charges, invoices, double billing, payment methods\n"
+        "- product_info: questions about product features, specifications, availability, or compatibility\n"
+        "- membership: membership tiers, rewards points, upgrade eligibility, membership benefits\n"
+        "- general: greetings, complaints, feedback, anything that doesn't fit the above categories\n\n"
+        "When in doubt between two categories, pick the more specific one."
+    )},
+    {"role": "user", "content": query},
+    ],
     )
     intent = response.choices[0].message.content.strip().lower().replace(" ", "_")
     return intent if intent in INTENTS else "general"

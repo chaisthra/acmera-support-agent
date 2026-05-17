@@ -21,6 +21,7 @@ from dotenv import load_dotenv
 from query_classifier import classify_tool
 from retrieval import embed_query, retrieve_filtered, deduplicate_chunks, assemble_context
 from mock_tools import run_order_tracker, run_account_lookup, run_multi_tool
+from difficulty_classifier import route_model_llm
 
 load_dotenv()
 
@@ -115,8 +116,8 @@ def generate_response(query: str, context: str, intent: str, model: str = PRIMAR
 
 
 @observe(name="support_pipeline")
-def handle_query(query: str, model: str = PRIMARY_MODEL) -> dict:
-    """Full pipeline: tool-route → filtered retrieval → mock tool → dedup → respond."""
+def handle_query(query: str, model: str | None = None) -> dict:
+    """Full pipeline: tool-route → difficulty-route → filtered retrieval → mock tool → respond."""
     start_time = time.time()
     langfuse_context.update_current_trace(input=query, metadata={"pipeline": "project_b"})
 
@@ -124,28 +125,38 @@ def handle_query(query: str, model: str = PRIMARY_MODEL) -> dict:
     intent  = routing["intent"]
     tool    = routing["tool"]
 
+    # Difficulty routing — LLM picks gpt-4o or gpt-4o-mini for generation
+    if model is None:
+        model, difficulty_score, difficulty_reason = route_model_llm(query)
+    else:
+        difficulty_score, difficulty_reason = None, "model override"
+
     context, num_chunks, num_removed, doc_names = retrieve_policy(query, intent, tool)
     answer = generate_response(query, context, intent, model=model)
 
     elapsed = round(time.time() - start_time, 2)
     langfuse_context.update_current_trace(output=answer, metadata={
         "intent": intent, "tool": tool, "elapsed": elapsed,
+        "difficulty_score": difficulty_score, "generation_model": model,
     })
     trace_id = langfuse_context.get_current_trace_id()
     langfuse.flush()
 
     return {
-        "query":           query,
-        "intent":          intent,
-        "tool":            tool,
-        "reason":          routing["reason"],
-        "context":         context,
-        "retrieved_docs":  doc_names,
-        "chunks_used":     num_chunks,
-        "dupes_removed":   num_removed,
-        "answer":          answer,
-        "trace_id":        trace_id,
-        "elapsed_seconds": elapsed,
+        "query":              query,
+        "intent":             intent,
+        "tool":               tool,
+        "reason":             routing["reason"],
+        "context":            context,
+        "retrieved_docs":     doc_names,
+        "chunks_used":        num_chunks,
+        "dupes_removed":      num_removed,
+        "difficulty_score":   difficulty_score,
+        "difficulty_reason":  difficulty_reason,
+        "generation_model":   model,
+        "answer":             answer,
+        "trace_id":           trace_id,
+        "elapsed_seconds":    elapsed,
     }
 
 
@@ -195,10 +206,15 @@ if __name__ == "__main__":
             print(f"\n✗ Fallback failed: {e}")
 
     elif mode == "--test":
+        import json as _json
+        LOGS_DIR = os.path.join(os.path.dirname(__file__), "..", "logs")
+        os.makedirs(LOGS_DIR, exist_ok=True)
+
         print("\n" + "="*65)
         print("9-QUERY TEST SUITE")
         print("="*65)
         passed = 0
+        rows = []
         for query, expected_intent in TEST_QUERIES:
             result = handle_query(query)
             intent_ok = result["intent"] == expected_intent
@@ -206,11 +222,24 @@ if __name__ == "__main__":
                 passed += 1
             status = "✓" if intent_ok else "✗"
             print(f"\n{status} [{result['intent']:20s}] {query[:55]}")
-            print(f"  Tool   : {result['tool']}")
-            print(f"  Chunks : {result['chunks_used']} used, {result['dupes_removed']} dupes removed")
-            print(f"  Answer : {result['answer'][:180]}...")
-        print(f"\n{'='*65}")
-        print(f"Result: {passed}/{len(TEST_QUERIES)} intent classifications correct")
+            print(f"  Tool      : {result['tool']}")
+            print(f"  Difficulty: {result['difficulty_score']}  Model: {result['generation_model']}")
+            print(f"  Chunks    : {result['chunks_used']} used, {result['dupes_removed']} dupes removed")
+            print(f"  Answer    : {result['answer'][:180]}...")
+            rows.append({k: result[k] for k in
+                         ["query", "intent", "tool", "difficulty_score", "difficulty_reason",
+                          "generation_model", "chunks_used", "dupes_removed",
+                          "answer", "trace_id", "elapsed_seconds"]
+                         } | {"expected_intent": expected_intent, "intent_correct": intent_ok})
+
+        summary = f"Result: {passed}/{len(TEST_QUERIES)} intent classifications correct"
+        print(f"\n{'='*65}\n{summary}")
+
+        # Save JSON proof
+        out_json = os.path.join(LOGS_DIR, "pipeline_test_run.json")
+        with open(out_json, "w") as f:
+            _json.dump({"summary": summary, "results": rows}, f, indent=2)
+        print(f"[saved → logs/pipeline_test_run.json]")
 
     else:
         result = handle_query("Where is my order ORD-445521?")

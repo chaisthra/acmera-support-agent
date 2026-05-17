@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Acmera Support Agent</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+/* ── Reset & base ─────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:          #f1f5f9;
+  --surface:     #ffffff;
+  --surface-2:   #f8fafc;
+  --blue:        #2563eb;
+  --blue-light:  #eff6ff;
+  --blue-dark:   #1d4ed8;
+  --purple:      #7c3aed;
+  --text:        #0f172a;
+  --text-muted:  #64748b;
+  --border:      #e2e8f0;
+  --green:       #10b981;
+  --amber:       #f59e0b;
+  --red:         #ef4444;
+  --radius:      12px;
+  --radius-lg:   18px;
+  --shadow-sm:   0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+  --shadow:      0 4px 16px rgba(0,0,0,.08), 0 1px 4px rgba(0,0,0,.04);
+  --shadow-lg:   0 20px 48px rgba(0,0,0,.10), 0 4px 12px rgba(0,0,0,.06);
+  --sidebar-w:   280px;
+  --header-h:    64px;
+}
+html, body { height: 100%; font-family: 'Inter', sans-serif; font-size: 14px; color: var(--text); background: var(--bg); overflow: hidden; }
+
+/* ── Background blobs ─────────────────────────── */
+.bg { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.blob { position: absolute; border-radius: 50%; filter: blur(80px); opacity: .12; }
+.blob-1 { width: 700px; height: 700px; background: radial-gradient(circle, #60a5fa, #3b82f6); top: -300px; right: -200px; }
+.blob-2 { width: 500px; height: 500px; background: radial-gradient(circle, #a78bfa, #7c3aed); bottom: -200px; left: -150px; }
+.blob-3 { width: 300px; height: 300px; background: radial-gradient(circle, #34d399, #10b981); bottom: 100px; right: 100px; }
+
+/* ── Layout ───────────────────────────────────── */
+.layout { display: flex; height: 100vh; position: relative; z-index: 1; }
+
+/* ── Sidebar ──────────────────────────────────── */
+.sidebar {
+  width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  transition: width .25s ease, min-width .25s ease;
+  flex-shrink: 0;
+}
+.sidebar.collapsed { width: 0; min-width: 0; }
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sidebar-logo img { width: 32px; height: 32px; object-fit: contain; border-radius: 8px; }
+.sidebar-logo span { font-weight: 700; font-size: 15px; color: var(--text); white-space: nowrap; }
+
+.sidebar-inner { padding: 16px; flex: 1; overflow: hidden; }
+
+.config-section { margin-bottom: 24px; }
+.config-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  padding: 0 2px;
+}
+
+.option-group { display: flex; flex-direction: column; gap: 4px; }
+.opt-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+  font-family: inherit;
+  width: 100%;
+  text-align: left;
+}
+.opt-btn:hover { background: var(--blue-light); color: var(--blue); }
+.opt-btn.active { background: var(--blue-light); color: var(--blue); }
+.opt-btn .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  border: 2px solid currentColor;
+  flex-shrink: 0;
+  transition: background .15s;
+}
+.opt-btn.active .dot { background: var(--blue); border-color: var(--blue); }
+.opt-btn:disabled { opacity: .4; cursor: not-allowed; }
+.opt-btn:disabled:hover { background: transparent; color: var(--text-muted); }
+
+/* Toggle */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 2px;
+}
+.toggle-row span { font-size: 13px; font-weight: 500; color: var(--text); }
+.toggle {
+  position: relative;
+  width: 38px; height: 22px;
+  background: var(--border);
+  border-radius: 11px;
+  cursor: pointer;
+  transition: background .2s;
+  border: none;
+  flex-shrink: 0;
+}
+.toggle.on { background: var(--blue); }
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 16px; height: 16px;
+  background: white;
+  border-radius: 50%;
+  transition: transform .2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+.toggle.on::after { transform: translateX(16px); }
+
+/* Sidebar divider */
+.sidebar-divider { height: 1px; background: var(--border); margin: 4px 0 20px; }
+
+/* ── Main area ────────────────────────────────── */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+/* ── Header ───────────────────────────────────── */
+.header {
+  height: var(--header-h);
+  background: rgba(255,255,255,.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 24px;
+  flex-shrink: 0;
+}
+.header-toggle {
+  width: 36px; height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted);
+  font-size: 16px;
+  transition: all .15s;
+  flex-shrink: 0;
+}
+.header-toggle:hover { background: var(--blue-light); color: var(--blue); border-color: var(--blue); }
+.header-title { flex: 1; min-width: 0; }
+.header-title h1 { font-size: 16px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.header-title p  { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.header-badges { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+.badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .03em;
+  display: flex; align-items: center; gap: 5px;
+}
+.badge-agent    { background: var(--blue-light); color: var(--blue); }
+.badge-pipeline { background: #f5f3ff; color: #6d28d9; }
+.badge-model    { background: #f0fdf4; color: #166534; }
+
+/* ── Chat scroll area ─────────────────────────── */
+.chat-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  scroll-behavior: smooth;
+  background-image: url('https://ik.imagekit.io/kr7ylbnd3/banner.png');
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-attachment: local;
+  position: relative;
+}
+.chat-scroll::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(241, 245, 249, 0.88);
+  pointer-events: none;
+  z-index: 0;
+}
+.chat-scroll > * { position: relative; z-index: 1; }
+.chat-scroll::-webkit-scrollbar { width: 5px; }
+.chat-scroll::-webkit-scrollbar-track { background: transparent; }
+.chat-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ── Welcome / suggestions ────────────────────── */
+.welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  animation: fadeUp .4s ease;
+}
+.welcome-icon {
+  width: 72px; height: 72px;
+  background: linear-gradient(135deg, var(--blue), var(--purple));
+  border-radius: 20px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px;
+  margin-bottom: 20px;
+  box-shadow: 0 8px 24px rgba(37,99,235,.25);
+}
+.welcome h2 { font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.welcome p  { font-size: 14px; color: var(--text-muted); margin-bottom: 28px; max-width: 420px; }
+
+.suggestions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 580px; }
+.sug-btn {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+  font-family: inherit;
+  box-shadow: var(--shadow-sm);
+}
+.sug-btn:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); box-shadow: none; }
+
+/* ── Messages ─────────────────────────────────── */
+.message-wrap { margin-bottom: 24px; animation: fadeUp .3s ease; }
+
+.msg-user { display: flex; justify-content: flex-end; }
+.msg-user .bubble {
+  max-width: 65%;
+  background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+  color: white;
+  padding: 12px 16px;
+  border-radius: var(--radius-lg) var(--radius-lg) 4px var(--radius-lg);
+  font-size: 14px;
+  line-height: 1.6;
+  box-shadow: 0 4px 12px rgba(37,99,235,.25);
+}
+
+.msg-ai { display: flex; flex-direction: column; gap: 12px; }
+.ai-header { display: flex; align-items: center; gap: 10px; }
+.ai-avatar {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, var(--blue), var(--purple));
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.ai-label { font-size: 13px; font-weight: 600; color: var(--text); }
+
+.ai-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  box-shadow: var(--shadow);
+}
+
+/* Markdown rendering */
+.ai-card h1,.ai-card h2,.ai-card h3 { font-weight: 700; margin: 12px 0 6px; }
+.ai-card h1 { font-size: 18px; } .ai-card h2 { font-size: 16px; } .ai-card h3 { font-size: 14px; }
+.ai-card p { font-size: 14px; line-height: 1.7; color: var(--text); margin-bottom: 10px; }
+.ai-card p:last-child { margin-bottom: 0; }
+.ai-card ul,.ai-card ol { padding-left: 20px; margin-bottom: 10px; }
+.ai-card li { font-size: 14px; line-height: 1.7; color: var(--text); margin-bottom: 4px; }
+.ai-card code { background: var(--surface-2); padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+.ai-card strong { font-weight: 600; }
+
+/* Metrics bar */
+.metrics-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 4px 2px;
+}
+.metric-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+.metric-pill .icon { font-size: 12px; }
+.trace-link { color: var(--blue); text-decoration: none; font-size: 11px; font-weight: 500; }
+.trace-link:hover { text-decoration: underline; }
+
+/* Intent chip */
+.intent-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--blue-light);
+  color: var(--blue);
+}
+
+/* ── Trajectory bar ───────────────────────────── */
+.trajectory-section {
+  margin-top: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+}
+.trajectory-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.trajectory-nodes {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+.traj-node {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.traj-classify  { background: #eff6ff; color: #1d4ed8; }
+.traj-tool_call { background: #f5f3ff; color: #5b21b6; }
+.traj-evaluate  { background: #fffbeb; color: #92400e; }
+.traj-respond   { background: #ecfdf5; color: #065f46; }
+.traj-escalate  { background: #fef2f2; color: #991b1b; }
+.traj-retrieve  { background: #f0fdf4; color: #166534; }
+.traj-generate  { background: #eff6ff; color: #1d4ed8; }
+.traj-arrow {
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+
+/* Tools chips */
+.tools-section { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.tools-label { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+.tool-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.tool-policy_kb       { background: #eff6ff; color: #1d4ed8; }
+.tool-order_tracker   { background: #f5f3ff; color: #5b21b6; }
+.tool-account_lookup  { background: #ecfdf5; color: #065f46; }
+.tool-policy_kb::before      { content: '📄 '; }
+.tool-order_tracker::before  { content: '📦 '; }
+.tool-account_lookup::before { content: '👤 '; }
+
+/* Typing indicator */
+.typing-dots { display: flex; gap: 4px; align-items: center; height: 20px; }
+.typing-dots span {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--blue);
+  animation: bounce .9s infinite;
+}
+.typing-dots span:nth-child(2) { animation-delay: .15s; }
+.typing-dots span:nth-child(3) { animation-delay: .30s; }
+
+/* ── Escalation card ──────────────────────────── */
+.esc-card {
+  margin-top: 12px;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: #fff;
+}
+.esc-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #fef2f2;
+  cursor: pointer;
+  user-select: none;
+}
+.esc-header-text { flex: 1; min-width: 0; }
+.esc-header-title { font-size: 13px; font-weight: 700; color: #991b1b; }
+.esc-header-sub   { font-size: 11px; color: #b91c1c; margin-top: 2px; }
+.esc-arrow { font-size: 10px; color: #991b1b; transition: transform .2s; }
+.esc-card.open .esc-arrow { transform: rotate(90deg); }
+.esc-body { padding: 14px 16px; display: none; }
+.esc-card.open .esc-body { display: block; }
+.esc-row { margin-bottom: 10px; }
+.esc-row-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted); margin-bottom: 3px; }
+.esc-row-value { font-size: 13px; color: var(--text); line-height: 1.5; }
+.esc-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.esc-badge {
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.esc-badge-urgent    { background: #991b1b; color: #fff; }
+.esc-badge-intent    { background: #eff6ff; color: #1d4ed8; }
+.esc-badge-human     { background: #fef2f2; color: #991b1b; }
+.esc-ref {
+  font-family: monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: #991b1b;
+  letter-spacing: .04em;
+}
+
+/* ── Input area ───────────────────────────────── */
+.input-area {
+  flex-shrink: 0;
+  padding: 16px 24px 20px;
+  background: rgba(255,255,255,.85);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border);
+}
+.input-box {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
+  box-shadow: var(--shadow);
+  transition: border-color .15s, box-shadow .15s;
+}
+.input-box:focus-within { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,.10), var(--shadow); }
+#query-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text);
+  background: transparent;
+  resize: none;
+  max-height: 120px;
+  min-height: 22px;
+  line-height: 1.6;
+}
+#query-input::placeholder { color: var(--text-muted); }
+.send-btn {
+  width: 38px; height: 38px;
+  background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: white;
+  font-size: 16px;
+  flex-shrink: 0;
+  transition: opacity .15s, transform .15s;
+  box-shadow: 0 2px 8px rgba(37,99,235,.3);
+}
+.send-btn:hover { opacity: .9; transform: scale(1.04); }
+.send-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+.input-hint { font-size: 11px; color: var(--text-muted); margin-top: 8px; text-align: center; }
+
+/* ── Animations ───────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes bounce {
+  0%, 80%, 100% { transform: translateY(0); }
+  40%            { transform: translateY(-6px); }
+}
+
+/* ── Scrollbar ────────────────────────────────── */
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ── Responsive ───────────────────────────────── */
+@media (max-width: 640px) {
+  .sidebar { position: absolute; z-index: 10; height: 100%; box-shadow: var(--shadow-lg); }
+  .sidebar.collapsed { box-shadow: none; }
+  .header-title p { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="bg">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+</div>
+
+<div class="layout">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <img src="https://ik.imagekit.io/kr7ylbnd3/logo.png" alt="Acmera" onerror="this.style.display='none'" />
+      <span>Acmera Agent</span>
+    </div>
+
+    <div class="sidebar-inner">
+
+      <!-- Agent Mode -->
+      <div class="config-section">
+        <div class="config-label">Agent Mode</div>
+        <div class="option-group" id="mode-group">
+          <button class="opt-btn active" data-mode="agent">
+            <span class="dot"></span> LangGraph Agent
+          </button>
+          <button class="opt-btn" data-mode="pipeline">
+            <span class="dot"></span> Support Pipeline
+          </button>
+        </div>
+      </div>
+
+      <!-- Generation Model -->
+      <div class="config-section" id="model-section">
+        <div class="config-label">Generation Model</div>
+        <div class="option-group" id="model-group">
+          <button class="opt-btn active" data-model="auto">
+            <span class="dot"></span> Auto (difficulty-routed)
+          </button>
+          <button class="opt-btn" data-model="gpt-4o-mini" disabled title="Override available in Pipeline mode">
+            <span class="dot"></span> Force GPT-4o-mini
+          </button>
+          <button class="opt-btn" data-model="gpt-4o" disabled title="Override available in Pipeline mode">
+            <span class="dot"></span> Force GPT-4o
+          </button>
+        </div>
+      </div>
+
+      <div class="sidebar-divider"></div>
+
+      <!-- Features -->
+      <div class="config-section">
+        <div class="config-label">Features</div>
+        <div class="toggle-row">
+          <span>Show Trajectory</span>
+          <button class="toggle on" id="trajectory-toggle"></button>
+        </div>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <div class="main">
+
+    <!-- Header -->
+    <header class="header">
+      <button class="header-toggle" id="toggle-btn" title="Toggle sidebar">☰</button>
+      <div class="header-title">
+        <h1>Acmera Support Agent</h1>
+        <p>5-node LangGraph agent · intent routing · escalation detection · difficulty-adaptive generation</p>
+      </div>
+      <div class="header-badges">
+        <span class="badge badge-agent" id="mode-badge">🤖 Agent</span>
+        <span class="badge badge-model" id="model-badge">⚡ Auto</span>
+      </div>
+    </header>
+
+    <!-- Chat scroll -->
+    <div class="chat-scroll" id="chat">
+
+      <!-- Welcome -->
+      <div class="welcome" id="welcome">
+        <div class="welcome-icon">🤖</div>
+        <h2>Acmera Support Agent</h2>
+        <p>Powered by a 5-node LangGraph graph: classify → retrieve → evaluate → respond or escalate.</p>
+        <div class="suggestions">
+          <button class="sug-btn" onclick="fillQuery('Where is my order ORD-445521?')">📦 Where is my order ORD-445521?</button>
+          <button class="sug-btn" onclick="fillQuery('What is the return window for electronics?')">↩️ Return window for electronics?</button>
+          <button class="sug-btn" onclick="fillQuery('I\'m a Gold member — what are my return options for order ORD-445521?')">🥇 Gold member return options</button>
+          <button class="sug-btn" onclick="fillQuery('Someone logged into my account without my permission')">🚨 Unauthorized account access</button>
+          <button class="sug-btn" onclick="fillQuery('My refund hasn\'t arrived in 10 days')">💳 Overdue refund</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Input -->
+    <div class="input-area">
+      <div class="input-box">
+        <textarea id="query-input" placeholder="Ask about orders, returns, billing, or account issues…" rows="1"></textarea>
+        <button class="send-btn" id="send-btn" title="Send">
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </div>
+      <div class="input-hint">Press <kbd>Enter</kbd> to send · <kbd>Shift+Enter</kbd> for new line</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────
+let currentMode      = 'agent';
+let currentModel     = 'auto';
+let showTrajectory   = true;
+let loading          = false;
+
+const modeLabels  = { agent: '🤖 Agent', pipeline: '🔀 Pipeline' };
+const modelLabels = { auto: '⚡ Auto', 'gpt-4o-mini': '💡 4o-mini', 'gpt-4o': '🚀 GPT-4o' };
+
+const nodeIcons = {
+  classify:  '🔍',
+  tool_call: '🔧',
+  evaluate:  '⚖️',
+  respond:   '💬',
+  escalate:  '🚨',
+  retrieve:  '📚',
+  generate:  '✍️',
+};
+
+// ── Sidebar toggle ─────────────────────────────
+document.getElementById('toggle-btn').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('collapsed');
+});
+
+// ── Mode selection ─────────────────────────────
+document.getElementById('mode-group').addEventListener('click', e => {
+  const btn = e.target.closest('.opt-btn');
+  if (!btn) return;
+  document.querySelectorAll('#mode-group .opt-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentMode = btn.dataset.mode;
+  document.getElementById('mode-badge').className = `badge badge-${currentMode === 'agent' ? 'agent' : 'pipeline'}`;
+  document.getElementById('mode-badge').textContent = modeLabels[currentMode];
+
+  // enable model override only in pipeline mode
+  const modelBtns = document.querySelectorAll('#model-group .opt-btn');
+  if (currentMode === 'pipeline') {
+    modelBtns.forEach(b => b.disabled = false);
+  } else {
+    // reset to auto and disable overrides
+    modelBtns.forEach(b => { b.classList.remove('active'); b.disabled = b.dataset.model !== 'auto'; });
+    modelBtns[0].classList.add('active');
+    currentModel = 'auto';
+    document.getElementById('model-badge').textContent = modelLabels['auto'];
+  }
+});
+
+// ── Model selection ────────────────────────────
+document.getElementById('model-group').addEventListener('click', e => {
+  const btn = e.target.closest('.opt-btn');
+  if (!btn || btn.disabled) return;
+  document.querySelectorAll('#model-group .opt-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentModel = btn.dataset.model;
+  document.getElementById('model-badge').textContent = modelLabels[currentModel] || currentModel;
+});
+
+// ── Toggle switches ────────────────────────────
+document.getElementById('trajectory-toggle').addEventListener('click', function() {
+  this.classList.toggle('on');
+  showTrajectory = this.classList.contains('on');
+});
+
+// ── Auto-resize textarea ───────────────────────
+const input = document.getElementById('query-input');
+input.addEventListener('input', () => {
+  input.style.height = 'auto';
+  input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+});
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendQuery(); }
+});
+document.getElementById('send-btn').addEventListener('click', sendQuery);
+
+// ── Suggested prompt ───────────────────────────
+function fillQuery(text) {
+  input.value = text;
+  input.style.height = 'auto';
+  input.focus();
+}
+
+// ── Send query ─────────────────────────────────
+async function sendQuery() {
+  const query = input.value.trim();
+  if (!query || loading) return;
+
+  loading = true;
+  document.getElementById('send-btn').disabled = true;
+  input.value = '';
+  input.style.height = 'auto';
+
+  const welcome = document.getElementById('welcome');
+  if (welcome) welcome.style.display = 'none';
+
+  appendUser(query);
+  const aiWrap = appendAILoading();
+  const chat   = document.getElementById('chat');
+  chat.scrollTop = chat.scrollHeight;
+
+  try {
+    const payload = {
+      query,
+      mode:             currentMode,
+      model_override:   currentModel === 'auto' ? null : currentModel,
+      show_trajectory:  showTrajectory,
+    };
+    const res = await fetch('/api/ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      let detail = `Server error ${res.status}`;
+      try { const j = await res.json(); detail = j.detail || detail; } catch {}
+      throw new Error(detail);
+    }
+    const data = await res.json();
+    renderResponse(aiWrap, data);
+  } catch (err) {
+    renderError(aiWrap, err.message);
+  } finally {
+    loading = false;
+    document.getElementById('send-btn').disabled = false;
+    chat.scrollTop = chat.scrollHeight;
+  }
+}
+
+// ── Render helpers ─────────────────────────────
+function appendUser(text) {
+  const chat = document.getElementById('chat');
+  const wrap = document.createElement('div');
+  wrap.className = 'message-wrap msg-user';
+  wrap.innerHTML = `<div class="bubble">${escapeHtml(text)}</div>`;
+  chat.appendChild(wrap);
+}
+
+function appendAILoading() {
+  const chat = document.getElementById('chat');
+  const wrap = document.createElement('div');
+  wrap.className = 'message-wrap msg-ai';
+  wrap.innerHTML = `
+    <div class="ai-header">
+      <div class="ai-avatar">🤖</div>
+      <span class="ai-label">Acmera Support Agent</span>
+    </div>
+    <div class="ai-card">
+      <div class="typing-dots"><span></span><span></span><span></span></div>
+    </div>`;
+  chat.appendChild(wrap);
+  return wrap;
+}
+
+function renderResponse(wrap, data) {
+  const card = wrap.querySelector('.ai-card');
+
+  // ── Answer ──────────────────────────────────────────────────────────────
+  card.innerHTML = marked.parse(data.answer || '_(no answer)_');
+
+  // ── Update model badge from actual response ──────────────────────────────
+  if (data.generation_model) {
+    const mdl = data.generation_model.includes('4o-mini') ? '💡 4o-mini'
+              : data.generation_model.includes('4o')      ? '🚀 GPT-4o'
+              : data.generation_model;
+    document.getElementById('model-badge').textContent = mdl;
+  }
+
+  // ── Metrics bar ──────────────────────────────────────────────────────────
+  const intentChip = data.intent
+    ? `<span class="intent-chip">🏷 ${escapeHtml(data.intent)}</span>`
+    : '';
+  const diffStr = data.difficulty_score
+    ? `<span class="metric-pill"><span class="icon">🎯</span>Diff ${data.difficulty_score}/5</span>`
+    : '';
+  const stepsStr = `<span class="metric-pill"><span class="icon">🔁</span>${data.steps_taken} step${data.steps_taken !== 1 ? 's' : ''}</span>`;
+  const traceLink = data.trace_url
+    ? `<a class="trace-link" href="${data.trace_url}" target="_blank" rel="noopener">🔗 Trace</a>`
+    : '';
+
+  const metricsHtml = `
+    <div class="metrics-bar">
+      <span class="metric-pill"><span class="icon">⏱</span>${data.elapsed_seconds}s</span>
+      ${intentChip}
+      ${diffStr}
+      ${stepsStr}
+      ${traceLink}
+    </div>`;
+  card.insertAdjacentHTML('afterend', metricsHtml);
+
+  // ── Trajectory ───────────────────────────────────────────────────────────
+  if (showTrajectory && data.trajectory && data.trajectory.length > 0) {
+    const nodesHtml = data.trajectory.map((node, i) => {
+      const icon  = nodeIcons[node] || '•';
+      const cls   = `traj-${node}`;
+      const arrow = i < data.trajectory.length - 1 ? '<span class="traj-arrow">→</span>' : '';
+      return `<span class="traj-node ${cls}">${icon} ${escapeHtml(node)}</span>${arrow}`;
+    }).join('');
+
+    const toolsHtml = (data.tools_called || []).map(t => {
+      const cls = `tool-${t}`;
+      return `<span class="tool-chip ${cls}">${escapeHtml(t)}</span>`;
+    }).join('');
+
+    const trajEl = document.createElement('div');
+    trajEl.className = 'trajectory-section';
+    trajEl.innerHTML = `
+      <div class="trajectory-label">Agent Trajectory</div>
+      <div class="trajectory-nodes">${nodesHtml}</div>
+      ${toolsHtml ? `<div class="tools-section" style="margin-top:8px">
+        <span class="tools-label">Tools:</span>${toolsHtml}
+      </div>` : ''}`;
+    wrap.appendChild(trajEl);
+  }
+
+  // ── Escalation card ──────────────────────────────────────────────────────
+  if (data.should_escalate) {
+    // Extract reference number from answer if present
+    const refMatch = data.answer.match(/ESC-\d{5}/);
+    const ref = refMatch ? refMatch[0] : 'ESC-AUTO';
+
+    const escEl = document.createElement('div');
+    escEl.className = 'esc-card';
+    escEl.innerHTML = `
+      <div class="esc-header" onclick="this.closest('.esc-card').classList.toggle('open')">
+        <span style="font-size:18px">🚨</span>
+        <div class="esc-header-text">
+          <div class="esc-header-title">Escalated to Human Support</div>
+          <div class="esc-header-sub">Reference: <span class="esc-ref">${escapeHtml(ref)}</span> · response within 2 hours</div>
+        </div>
+        <span class="esc-arrow">▶</span>
+      </div>
+      <div class="esc-body">
+        <div class="esc-badges">
+          <span class="esc-badge esc-badge-urgent">🚨 Urgent</span>
+          <span class="esc-badge esc-badge-intent">${escapeHtml(data.intent || 'general')}</span>
+          <span class="esc-badge esc-badge-human">Human Review</span>
+        </div>
+        <div class="esc-row">
+          <div class="esc-row-label">Tools invoked before escalation</div>
+          <div class="esc-row-value">${escapeHtml((data.tools_called || []).join(', ') || 'none')}</div>
+        </div>
+        <div class="esc-row">
+          <div class="esc-row-label">Steps taken</div>
+          <div class="esc-row-value">${data.steps_taken} tool call${data.steps_taken !== 1 ? 's' : ''} before escalation decision</div>
+        </div>
+        <div class="esc-row">
+          <div class="esc-row-label">What happens next</div>
+          <div class="esc-row-value">A specialist will contact you via your registered email within 2 hours. Quote reference <strong>${escapeHtml(ref)}</strong> in any follow-up.</div>
+        </div>
+      </div>`;
+    wrap.appendChild(escEl);
+  }
+}
+
+function renderError(wrap, msg) {
+  const card = wrap.querySelector('.ai-card');
+  card.innerHTML = `<span style="color:var(--red)">⚠ Error: ${escapeHtml(msg)}</span>`;
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+</script>
+</body>
+</html>

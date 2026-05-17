@@ -1,24 +1,31 @@
 """
-Project B Evaluation Harness — Session 2 Reference Implementation
+Project B Evaluation Harness — Session 2 + Week 3 Agent Eval
 
 4-dimensional eval:
   1. check_classification()    — did it identify the right intent?
   2. check_retrieval_hit()     — did expected source doc appear in retrieved chunks?
   3. judge_faithfulness()      — is the answer grounded in context?
   4. judge_correctness()       — does it match the expected answer?
-  5. check_routing()           — should this have been escalated? (Week 4 target)
+  5. check_routing()           — should this have been escalated?
 
 Session 2 additions:
   6. run_stratified_eval()     — breakdown by intent and difficulty
   7. attach_langfuse_scores()  — attach all dimensions to Langfuse traces
   8. save_baseline()           — lock current scores as regression anchor
 
+Week 3 additions:
+  9. run_agent_eval()          — same 5 dimensions against LangGraph agent
+                                 records steps_taken and trajectory per query
+
 Flags:
+  --agent            run eval against LangGraph agent instead of naive pipeline
   --save-baseline    save scores to baseline_scores.json after eval
   --no-langfuse      skip Langfuse score attachment (faster, no network)
   --category <name>  run eval only on entries matching that category
 
-Run: python scripts/eval_harness.py
+Run:
+  python scripts/eval_harness.py              # naive pipeline
+  python scripts/eval_harness.py --agent      # LangGraph agent + comparison
 """
 import os
 import sys
@@ -228,13 +235,18 @@ def run_eval(category_filter: str | None = None) -> list:
     return results
 
 
-def _print_scorecard(results: list):
+def _print_scorecard(results: list, label: str = "PROJECT B SCORECARD"):
     n = len(results)
     if n == 0:
         return
 
     classification_acc = sum(1 for r in results if r["classification_correct"]) / n
-    retrieval_hit_rate = sum(1 for r in results if r["retrieval_hit"]) / n
+
+    hit_results = [r for r in results if r.get("retrieval_hit") is not None]
+    retrieval_hit_rate = (
+        sum(1 for r in hit_results if r["retrieval_hit"]) / len(hit_results)
+        if hit_results else None
+    )
 
     should_escalate = [r for r in results if r["expected_escalation"]]
     should_handle   = [r for r in results if not r["expected_escalation"]]
@@ -254,12 +266,15 @@ def _print_scorecard(results: list):
 
     print()
     print("=" * 55)
-    print("  PROJECT B SCORECARD")
+    print(f"  {label}")
     print("=" * 55)
     print(f"  Queries evaluated       : {n}")
     print()
     print(f"  [1] Classification acc  : {classification_acc:.0%}")
-    print(f"  [2] Retrieval hit rate  : {retrieval_hit_rate:.0%}")
+    if retrieval_hit_rate is not None:
+        print(f"  [2] Retrieval hit rate  : {retrieval_hit_rate:.0%}")
+    else:
+        print(f"  [2] Retrieval hit rate  : N/A (not tracked at agent level)")
     print()
     print(f"  [3] Routing accuracy")
     print(f"      overall             : {overall_routing:.0%}")
@@ -267,11 +282,213 @@ def _print_scorecard(results: list):
           f"  ({len(should_handle)} queries expected_escalation=False)")
     print(f"      missed-esc caught   : {missed_esc_caught:.0%}"
           f"  ({len(should_escalate)} queries expected_escalation=True)")
-    print(f"      → 0% missed-esc is the Week 4 starting point")
     print()
     print(f"  [4] Avg faithfulness    : {avg_faith:.2f} / 5")
     print(f"  [5] Avg correctness     : {avg_correct:.2f} / 5")
     print("=" * 55)
+
+    return {
+        "n": n,
+        "classification_acc": classification_acc,
+        "retrieval_hit_rate": retrieval_hit_rate,
+        "routing_overall": overall_routing,
+        "routing_correct_handle": correct_handle,
+        "routing_missed_esc_caught": missed_esc_caught,
+        "avg_faithfulness": avg_faith,
+        "avg_correctness": avg_correct,
+    }
+
+
+# =========================================================================
+# AGENT EVAL
+# =========================================================================
+
+def run_agent_eval(category_filter: str | None = None) -> list:
+    """
+    Run 5-dimensional eval against the LangGraph agent.
+    Key differences vs naive pipeline:
+    - predicted_escalation comes from agent's should_escalate (not hardcoded False)
+    - steps_taken and trajectory recorded per query
+    - retrieval_hit is None (doc names not surfaced at agent level)
+    """
+    from agent import run_agent
+
+    dataset = load_golden_dataset(category_filter)
+    if not dataset:
+        return []
+
+    print(f"\nRunning AGENT eval on {len(dataset)} queries...\n")
+
+    results = []
+    for entry in dataset:
+        print(f"  [{entry['id']}] {entry['query'][:60]}...")
+        try:
+            agent_result = run_agent(entry["query"])
+
+            predicted_escalation = agent_result["should_escalate"]
+            answer  = agent_result["final_answer"]
+            context = agent_result.get("context") or answer
+
+            classification_correct = check_classification(agent_result["intent"], entry["expected_intent"])
+            routing_correct        = check_routing(predicted_escalation, entry["expected_escalation"])
+            faith                  = judge_faithfulness(entry["query"], answer, context)
+            correct                = judge_correctness(entry["query"], answer, entry["expected_answer"])
+
+            print(f"         class={classification_correct}  routing={routing_correct}"
+                  f"  esc={predicted_escalation}  steps={agent_result['steps_taken']}"
+                  f"  faith={faith['score']}  correct={correct['score']}"
+                  f"  traj={agent_result['trajectory']}")
+
+            results.append({
+                "id":                     entry["id"],
+                "query":                  entry["query"],
+                "category":               entry.get("category", "unknown"),
+                "difficulty":             entry.get("difficulty", "easy"),
+                "expected_intent":        entry["expected_intent"],
+                "predicted_intent":       agent_result["intent"],
+                "expected_escalation":    entry["expected_escalation"],
+                "predicted_escalation":   predicted_escalation,
+                "expected_source":        entry.get("expected_source", ""),
+                "retrieved_docs":         [],          # not tracked at agent level
+                "expected_answer":        entry["expected_answer"],
+                "answer":                 answer,
+                "trace_id":               agent_result.get("trace_id", ""),
+                "elapsed_seconds":        agent_result["elapsed_seconds"],
+                "steps_taken":            agent_result["steps_taken"],
+                "tools_called":           agent_result["tools_called"],
+                "trajectory":             agent_result["trajectory"],
+                "difficulty_score":       agent_result.get("difficulty_score", 0),
+                "generation_model":       agent_result.get("generation_model", ""),
+                "classification_correct": classification_correct,
+                "retrieval_hit":          None,        # N/A for agent
+                "routing_correct":        routing_correct,
+                "faithfulness":           faith,
+                "correctness":            correct,
+            })
+        except Exception as e:
+            import traceback
+            print(f"         ERROR — skipping: {e}")
+            traceback.print_exc()
+            continue
+
+    scores = _print_scorecard(results, label="LANGGRAPH AGENT SCORECARD")
+    _print_steps_distribution(results)
+
+    baseline = _load_baseline()
+    if baseline and scores:
+        _print_comparison(baseline, scores)
+
+    LOGS_DIR = os.path.join(SCRIPT_DIR, "..", "logs")
+    os.makedirs(LOGS_DIR, exist_ok=True)
+    out_path = os.path.join(LOGS_DIR, "agent_eval_results.json")
+    with open(out_path, "w") as f:
+        json.dump(results, f, indent=2)
+    print(f"\nAgent eval results saved to {out_path}")
+
+    return results
+
+
+def _print_steps_distribution(results: list):
+    """Print how many queries needed 1 / 2 / 3 tool-call steps."""
+    n = len(results)
+    if n == 0:
+        return
+
+    from collections import Counter
+    dist = Counter(r["steps_taken"] for r in results)
+
+    print()
+    print("=" * 55)
+    print("  STEPS TAKEN DISTRIBUTION")
+    print("=" * 55)
+    for steps in sorted(dist):
+        count = dist[steps]
+        bar   = "█" * count
+        label = {1: "single tool call", 2: "multi-tool / 2nd eval", 3: "step cap hit"}.get(steps, f"{steps} steps")
+        print(f"  {steps} step{'s' if steps != 1 else ''} : {count:>3} queries ({count/n:.0%})  {label}")
+        # show which queries hit each level
+        qs = [r["id"] for r in results if r["steps_taken"] == steps]
+        print(f"           {', '.join(qs)}")
+
+    avg_steps = sum(r["steps_taken"] for r in results) / n
+    print(f"\n  Avg steps per query: {avg_steps:.2f}")
+    print("=" * 55)
+
+
+def _load_baseline() -> dict | None:
+    path = os.path.join(SCRIPT_DIR, "baseline_scores.json")
+    if not os.path.exists(path):
+        return None
+    with open(path) as f:
+        return json.load(f)
+
+
+def _print_comparison(baseline: dict, agent: dict):
+    """Side-by-side comparison table: naive pipeline baseline vs LangGraph agent."""
+
+    def pct(v):
+        if v is None or (isinstance(v, float) and v != v):
+            return "  N/A "
+        return f"{v:.0%}"
+
+    def delta(a, b):
+        if a is None or b is None:
+            return "  —  "
+        if isinstance(a, float) and a != a:
+            return "  —  "
+        if isinstance(b, float) and b != b:
+            return "  —  "
+        d = b - a
+        sign = "+" if d >= 0 else ""
+        return f"{sign}{d:.0%}"
+
+    def score5(v):
+        if v is None:
+            return "  N/A "
+        return f"{v:.2f}/5"
+
+    def delta5(a, b):
+        if a is None or b is None:
+            return "  —  "
+        d = b - a
+        sign = "+" if d >= 0 else ""
+        return f"{sign}{d:.2f}"
+
+    b_esc  = baseline.get("routing_missed_esc_caught")
+    b_hdl  = baseline.get("routing_correct_handle")
+    a_esc  = agent.get("routing_missed_esc_caught")
+    a_hdl  = agent.get("routing_correct_handle")
+
+    print()
+    print("=" * 70)
+    print("  COMPARISON: NAIVE PIPELINE vs LANGGRAPH AGENT")
+    print("=" * 70)
+    print(f"  {'Dimension':<30} {'Naive':>8}  {'Agent':>8}  {'Delta':>8}")
+    print(f"  {'-'*30}  {'-'*8}  {'-'*8}  {'-'*8}")
+    print(f"  {'Classification acc':<30} {pct(baseline.get('classification_acc')):>8}  "
+          f"{pct(agent.get('classification_acc')):>8}  "
+          f"{delta(baseline.get('classification_acc'), agent.get('classification_acc')):>8}")
+    print(f"  {'Retrieval hit rate':<30} {pct(baseline.get('retrieval_hit_rate')):>8}  "
+          f"{'N/A':>8}  {'—':>8}")
+    print(f"  {'Routing overall':<30} {pct(baseline.get('routing_overall')):>8}  "
+          f"{pct(agent.get('routing_overall')):>8}  "
+          f"{delta(baseline.get('routing_overall'), agent.get('routing_overall')):>8}")
+    print(f"  {'  → missed-esc caught':<30} {pct(b_esc):>8}  "
+          f"{pct(a_esc):>8}  "
+          f"{delta(b_esc, a_esc):>8}   ← KEY METRIC")
+    print(f"  {'  → correct-handle':<30} {pct(b_hdl):>8}  "
+          f"{pct(a_hdl):>8}  "
+          f"{delta(b_hdl, a_hdl):>8}")
+    print(f"  {'Avg faithfulness':<30} {score5(baseline.get('avg_faithfulness')):>8}  "
+          f"{score5(agent.get('avg_faithfulness')):>8}  "
+          f"{delta5(baseline.get('avg_faithfulness'), agent.get('avg_faithfulness')):>8}")
+    print(f"  {'Avg correctness':<30} {score5(baseline.get('avg_correctness')):>8}  "
+          f"{score5(agent.get('avg_correctness')):>8}  "
+          f"{delta5(baseline.get('avg_correctness'), agent.get('avg_correctness')):>8}")
+    print("=" * 70)
+    if a_esc is not None and b_esc is not None and a_esc > b_esc:
+        pct_gain = a_esc - b_esc
+        print(f"\n  Routing improvement: missed-esc caught went from {pct(b_esc)} → {pct(a_esc)} (+{pct_gain:.0%})")
 
 
 # =========================================================================
@@ -356,8 +573,9 @@ def attach_langfuse_scores(results: list):
         try:
             lf.score(trace_id=trace_id, name="classification_correct",
                      value=1.0 if r["classification_correct"] else 0.0)
-            lf.score(trace_id=trace_id, name="retrieval_hit",
-                     value=1.0 if r["retrieval_hit"] else 0.0)
+            if r.get("retrieval_hit") is not None:
+                lf.score(trace_id=trace_id, name="retrieval_hit",
+                         value=1.0 if r["retrieval_hit"] else 0.0)
             lf.score(trace_id=trace_id, name="routing_correct",
                      value=1.0 if r["routing_correct"] else 0.0)
             lf.score(trace_id=trace_id, name="faithfulness",
@@ -387,11 +605,17 @@ def save_baseline(results: list):
     should_escalate = [r for r in results if r["expected_escalation"]]
     should_handle   = [r for r in results if not r["expected_escalation"]]
 
+    hit_results = [r for r in results if r.get("retrieval_hit") is not None]
+    retrieval_hit_rate = (
+        round(sum(1 for r in hit_results if r["retrieval_hit"]) / len(hit_results), 4)
+        if hit_results else None
+    )
+
     baseline = {
         "saved_at":              datetime.utcnow().isoformat() + "Z",
         "n":                     n,
         "classification_acc":    round(sum(1 for r in results if r["classification_correct"]) / n, 4),
-        "retrieval_hit_rate":    round(sum(1 for r in results if r["retrieval_hit"]) / n, 4),
+        "retrieval_hit_rate":    retrieval_hit_rate,
         "routing_overall":       round(sum(1 for r in results if r["routing_correct"]) / n, 4),
         "routing_correct_handle": round(
             sum(1 for r in should_handle if r["routing_correct"]) / len(should_handle), 4
@@ -422,6 +646,8 @@ def save_baseline(results: list):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--agent", action="store_true",
+                        help="Run eval against LangGraph agent instead of naive pipeline")
     parser.add_argument("--save-baseline", action="store_true",
                         help="Save scores to baseline_scores.json after eval")
     parser.add_argument("--no-langfuse", action="store_true",
@@ -430,7 +656,11 @@ if __name__ == "__main__":
                         help="Run eval only on entries matching this category")
     args = parser.parse_args()
 
-    results = run_eval(category_filter=args.category)
+    if args.agent:
+        results = run_agent_eval(category_filter=args.category)
+    else:
+        results = run_eval(category_filter=args.category)
+
     if not results:
         sys.exit(0)
 
