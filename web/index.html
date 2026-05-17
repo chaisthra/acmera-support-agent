@@ -395,9 +395,11 @@ html, body { height: 100%; font-family: 'Inter', sans-serif; font-size: 14px; co
 .tool-policy_kb       { background: #eff6ff; color: #1d4ed8; }
 .tool-order_tracker   { background: #f5f3ff; color: #5b21b6; }
 .tool-account_lookup  { background: #ecfdf5; color: #065f46; }
+.tool-multi_tool      { background: #fef3c7; color: #92400e; }
 .tool-policy_kb::before      { content: '📄 '; }
 .tool-order_tracker::before  { content: '📦 '; }
 .tool-account_lookup::before { content: '👤 '; }
+.tool-multi_tool::before     { content: '🔀 '; }
 
 /* Typing indicator */
 .typing-dots { display: flex; gap: 4px; align-items: center; height: 20px; }
@@ -822,12 +824,17 @@ function renderResponse(wrap, data) {
     ? `<a class="trace-link" href="${data.trace_url}" target="_blank" rel="noopener">🔗 Trace</a>`
     : '';
 
+  const cacheStr = data.cache_hit
+    ? `<span class="metric-pill" style="color:var(--amber)">⚡ Cache hit</span>`
+    : '';
+
   const metricsHtml = `
     <div class="metrics-bar">
       <span class="metric-pill"><span class="icon">⏱</span>${data.elapsed_seconds}s</span>
       ${intentChip}
       ${diffStr}
       ${stepsStr}
+      ${cacheStr}
       ${traceLink}
     </div>`;
   card.insertAdjacentHTML('afterend', metricsHtml);
@@ -846,10 +853,11 @@ function renderResponse(wrap, data) {
       return `<span class="tool-chip ${cls}">${escapeHtml(t)}</span>`;
     }).join('');
 
+    const trajLabel = data.mode === 'agent' ? 'Agent Trajectory' : 'Pipeline Steps';
     const trajEl = document.createElement('div');
     trajEl.className = 'trajectory-section';
     trajEl.innerHTML = `
-      <div class="trajectory-label">Agent Trajectory</div>
+      <div class="trajectory-label">${trajLabel}</div>
       <div class="trajectory-nodes">${nodesHtml}</div>
       ${toolsHtml ? `<div class="tools-section" style="margin-top:8px">
         <span class="tools-label">Tools:</span>${toolsHtml}

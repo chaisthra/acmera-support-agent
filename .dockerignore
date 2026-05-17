@@ -1,0 +1,9 @@
+.venv/
+.env
+__pycache__/
+*.pyc
+*.pyo
+.git/
+logs/
+scripts/__pycache__/
+scripts/eval_results.json
