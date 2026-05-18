@@ -31,6 +31,7 @@ from query_classifier import classify_tool
 from retrieval import embed_query, retrieve_filtered, deduplicate_chunks, assemble_context, retrieve_advanced
 from mock_tools import run_order_tracker, run_account_lookup
 from difficulty_classifier import route_model_llm
+from semantic_cache import get_semantic_cache
 
 load_dotenv()
 litellm.set_verbose = False
@@ -39,29 +40,10 @@ langfuse = Langfuse()
 LOGS_DIR = os.path.join(os.path.dirname(__file__), "..", "logs")
 
 
-def _init_redis_cache() -> None:
-    """
-    Wire LiteLLM to Redis at agent import time so caching is active whether
-    the agent is called via app.py or run directly (python scripts/agent.py).
-
-    Caches all temperature=0 LLM calls: classify_node, evaluate_node, respond_node.
-    No-ops silently if REDIS_HOST is not set.
-    """
-    host = os.getenv("REDIS_HOST")
-    if not host:
-        return
-    try:
-        litellm.cache = litellm.Cache(
-            type="redis",
-            host=host,
-            port=int(os.getenv("REDIS_PORT", 6379)),
-        )
-        print(f"[agent] LiteLLM cache → Redis {host}:{os.getenv('REDIS_PORT', 6379)}")
-    except Exception as e:
-        print(f"[agent] Redis cache setup skipped: {e}")
-
-
+_init_redis_cache = lambda: None  # LiteLLM Redis cache disabled — use semantic cache instead
 _init_redis_cache()
+
+_response_cache = get_semantic_cache(threshold=0.92, namespace="response", ttl=3600)
 
 
 # ---------------------------------------------------------------------------
@@ -118,10 +100,10 @@ def _policy_kb(query: str, intent: str) -> str:
 
 
 ESCALATION_SIGNALS = [
-    "someone else", "unauthorized", "hacked", "compromised", "not me",
-    "stolen", "fraud", "suspicious", "wrong person", "account access",
-    "didn't place", "i never ordered", "wallet disappeared", "balance gone",
-    "logged into my account", "account deleted", "lost my premium"
+    "someone else placed", "unauthorized access", "hacked", "compromised",
+    "not me", "billing fraud", "wrong person", "logged into my account",
+    "account deleted", "wallet disappeared", "balance gone",
+    "i never ordered", "didn't place this order",
 ]
 
 def _check_escalation_needed(query: str) -> bool:
@@ -192,15 +174,14 @@ Decide the next action:
 
 Rules:
 - steps_taken >= 3 → always "respond" (loop prevention)
-- Escalate when ANY of these are true:
-  * Account compromise, unauthorized access, or security concern
-  * Overdue refund or payment dispute with no resolution path
-  * Customer is angry, threatening, or in distress
-  * Query involves legal action or regulatory complaint
-  * Tool results show no data found AND query is urgent
-  * Double charge or billing fraud
-  * Lost or stolen package with no tracking resolution
-  * Query is outside agent's knowledge and customer needs immediate help
+- Escalate ONLY when the query or tool results EXPLICITLY indicate:
+  * Account compromise or unauthorized access (customer explicitly states it)
+  * Refund overdue beyond the stated timeline AND customer has already followed up
+  * Customer uses threatening or abusive language
+  * Legal action or regulatory complaint explicitly mentioned
+  * Double charge or billing fraud confirmed in tool results
+  * Customer explicitly states package is lost or stolen (not just undelivered or in transit)
+- DO NOT escalate for: orders in "shipped" or "processing" status, missing delivery dates, standard policy questions, or any routine order status inquiry
 - multi_tool intent with only 1 tool called so far → "tool_call"
 - Otherwise, if results are substantive → "respond"
 
@@ -351,11 +332,62 @@ agent = graph.compile()
 @observe(name="langgraph_agent")
 def run_agent(query: str, use_cache: bool = True) -> dict:
     """Run the agent and return state + trajectory. Traces to Langfuse."""
-    langfuse_context.update_current_trace(input=query, metadata={"pipeline": "project_b_agent"})
+    import hashlib
     start = time.time()
 
+    # ── Input guardrail ──────────────────────────────────────────────────────
+    from input_guardrail import check_input
+    guard = check_input(query)
+    if not guard["safe"]:
+        langfuse.flush()
+        return {
+            "query": query, "final_answer": guard["refusal"],
+            "trajectory": ["blocked"], "intent": guard["category"],
+            "tools_called": [], "steps_taken": 0, "difficulty_score": 0,
+            "generation_model": "", "should_escalate": False,
+            "context": "", "elapsed_seconds": round(time.time() - start, 2),
+            "trace_id": None, "blocked": True,
+            "block_category": guard["category"], "pii_redacted": False,
+        }
+
+    # ── PII anonymization ────────────────────────────────────────────────────
+    from pii_anonymizer import PiiAnonymizer, redaction_audit_log
+    anonymizer   = PiiAnonymizer()
+    clean_query  = anonymizer.anonymize(query)
+    pii_redacted = clean_query != query
+
+    if pii_redacted:
+        redaction_audit_log(
+            trace_id=langfuse_context.get_current_trace_id() or "unknown",
+            pii_types=anonymizer.detected_types,
+            query_hash=hashlib.sha256(query.encode()).hexdigest(),
+            intent=None,
+        )
+
+    langfuse_context.update_current_trace(
+        input=clean_query,
+        metadata={"pipeline": "project_b_agent", "pii_redacted": pii_redacted},
+    )
+
+    # ── Semantic response cache ──────────────────────────────────────────────
+    _query_embedding = embed_query(clean_query)
+    if use_cache:
+        hit = _response_cache.get(_query_embedding)
+        if hit:
+            cached_answer = anonymizer.restore(hit["answer"])
+            langfuse.flush()
+            return {
+                "query": query, "final_answer": cached_answer,
+                "trajectory": ["cache_hit"], "intent": "cached",
+                "tools_called": [], "steps_taken": 0, "difficulty_score": 0,
+                "generation_model": "", "should_escalate": False,
+                "context": "", "elapsed_seconds": round(time.time() - start, 2),
+                "trace_id": None, "blocked": False, "pii_redacted": pii_redacted,
+                "ticket": None, "cache_hit": True, "cache_similarity": hit["cache_similarity"],
+            }
+
     initial = {
-        "query":            query,
+        "query":            clean_query,
         "intent":           "",
         "tool":             "",
         "tool_results":     [],
@@ -383,16 +415,53 @@ def run_agent(query: str, use_cache: bool = True) -> dict:
                     else:
                         final_state[k] = v
 
+    final_answer     = final_state.get("final_answer", "")
+    should_escalate  = final_state.get("should_escalate", False)
+    context          = "\n\n---\n\n".join(final_state.get("tool_results", []))
+
+    # ── Source guardrail (hallucination check) ───────────────────────────────
+    from output_guardrail import check_hallucination, check_output
+    if context and final_answer:
+        hall = check_hallucination(final_answer, context)
+        if hall.get("has_hallucination"):
+            should_escalate = True
+
+    # ── Output guardrail (PII scan on answer) ────────────────────────────────
+    output_check = check_output(final_answer)
+    if not output_check["safe"]:
+        final_answer = output_check["redacted"]
+
+    # ── Escalation ticket ────────────────────────────────────────────────────
+    ticket = None
+    if should_escalate:
+        from support_ticket import generate_ticket
+        try:
+            t = generate_ticket(
+                query=query,
+                ai_response=final_answer,
+                reason="Agent escalation — low confidence or hallucination detected",
+            )
+            ticket = t.model_dump()
+        except Exception:
+            pass
+
+    if use_cache and not should_escalate:
+        _response_cache.set(clean_query, _query_embedding, final_answer)
+
+    # Restore original PII values in answer
+    final_answer = anonymizer.restore(final_answer)
+
     elapsed = round(time.time() - start, 2)
     langfuse_context.update_current_trace(
-        output=final_state.get("final_answer", ""),
+        output=final_answer,
         metadata={
             "trajectory":       trajectory,
             "tools_called":     final_state.get("tools_called", []),
             "intent":           final_state.get("intent", ""),
             "difficulty_score": final_state.get("difficulty_score", 0),
             "generation_model": final_state.get("generation_model", ""),
-            "should_escalate":  final_state.get("should_escalate", False),
+            "should_escalate":  should_escalate,
+            "pii_redacted":     pii_redacted,
             "elapsed_seconds":  elapsed,
         },
     )
@@ -407,11 +476,14 @@ def run_agent(query: str, use_cache: bool = True) -> dict:
         "steps_taken":      final_state.get("steps_taken", 0),
         "difficulty_score": final_state.get("difficulty_score", 0),
         "generation_model": final_state.get("generation_model", ""),
-        "should_escalate":  final_state.get("should_escalate", False),
-        "final_answer":     final_state.get("final_answer", ""),
-        "context":          "\n\n---\n\n".join(final_state.get("tool_results", [])),
+        "should_escalate":  should_escalate,
+        "final_answer":     final_answer,
+        "context":          context,
         "elapsed_seconds":  elapsed,
         "trace_id":         trace_id,
+        "blocked":          False,
+        "pii_redacted":     pii_redacted,
+        "ticket":           ticket,
     }
 
 

@@ -35,9 +35,9 @@ INTENT_DOC_FILTERS = {
 def get_connection():
     conn = psycopg2.connect(
         host=os.getenv("PG_HOST", "localhost"),
-        port=os.getenv("PG_PORT", "5434"),
+        port=int(os.getenv("PG_PORT", "5432")),
         user=os.getenv("PG_USER", "workshop"),
-        password=os.getenv("PG_PASSWORD", "workshop123"),
+        password=os.getenv("PG_PASSWORD"),
         dbname=os.getenv("PG_DATABASE", "acmera_kb"),
     )
     register_vector(conn)
@@ -163,3 +163,148 @@ def assemble_context(retrieved_chunks):
         "total_context_chars": len(context),
     })
     return context
+
+
+# ── Advanced retrieval stack ──────────────────────────────────────────────────
+
+def _jaccard(a, b):
+    sa, sb = set(a.lower().split()), set(b.lower().split())
+    if not sa and not sb:
+        return 1.0
+    return len(sa & sb) / len(sa | sb)
+
+
+def _deduplicate(chunks, threshold=0.75):
+    kept = []
+    for chunk in chunks:
+        if not any(_jaccard(chunk["content"], k["content"]) >= threshold for k in kept):
+            kept.append(chunk)
+    return kept
+
+
+def _expand_context(chunk, all_chunks, window=1):
+    same_doc = sorted(
+        [c for c in all_chunks if c["doc_name"] == chunk["doc_name"]],
+        key=lambda c: c["chunk_index"],
+    )
+    indices = [c["chunk_index"] for c in same_doc]
+    try:
+        pos = indices.index(chunk["chunk_index"])
+    except ValueError:
+        return [chunk]
+    return same_doc[max(0, pos - window): pos + window + 1]
+
+
+def _compress(chunks, max_tokens=2000):
+    def _score(c):
+        return c.get("cohere_score") or c.get("similarity") or 0
+    kept, total = [], 0
+    for chunk in sorted(chunks, key=_score, reverse=True):
+        tokens = int(len(chunk["content"].split()) * 1.3)
+        if total + tokens > max_tokens:
+            break
+        kept.append(chunk)
+        total += tokens
+    return kept
+
+
+def _order_by_source(chunks):
+    from collections import defaultdict
+    by_doc = defaultdict(list)
+    for c in chunks:
+        by_doc[c["doc_name"]].append(c)
+    ordered = []
+    for doc in sorted(by_doc):
+        ordered.extend(sorted(by_doc[doc], key=lambda c: c["chunk_index"]))
+    return ordered
+
+
+def _load_all_chunks():
+    conn = get_connection()
+    cur  = conn.cursor()
+    cur.execute("SELECT id, doc_name, chunk_index, content, metadata FROM chunks")
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    return [
+        {"id": r[0], "doc_name": r[1], "chunk_index": r[2], "content": r[3],
+         "metadata": r[4] if isinstance(r[4], dict) else json.loads(r[4])}
+        for r in rows
+    ]
+
+
+class CohereReranker:
+    MODEL = "rerank-v4.0-pro"
+
+    def __init__(self):
+        import cohere
+        self.co = cohere.ClientV2(os.getenv("COHERE_API_KEY"))
+
+    def rerank(self, query, chunks, top_k=5):
+        import time
+        if not chunks:
+            return []
+        time.sleep(6)  # trial key: 10 calls/min
+        response = self.co.rerank(
+            model=self.MODEL,
+            query=query,
+            documents=[c["content"] for c in chunks],
+            top_n=top_k,
+        )
+        reranked = []
+        for result in response.results:
+            chunk = chunks[result.index].copy()
+            chunk["cohere_score"] = round(result.relevance_score, 6)
+            reranked.append(chunk)
+        return reranked
+
+
+@observe(name="retrieve_advanced")
+def retrieve_advanced(query: str, intent: str, top_k: int = TOP_K) -> tuple[str, list]:
+    """
+    Full advanced retrieval pipeline:
+    embed → filtered dense (top_k×2) → Cohere rerank → expand → deduplicate
+    → compress → order_by_source → format context string.
+
+    Falls back to basic filtered retrieval if COHERE_API_KEY is not set.
+    Returns (context_string, reranked_chunks).
+    """
+    query_embedding = embed_query(query)
+    candidates      = retrieve_filtered(query_embedding, intent, top_k=top_k * 2)
+
+    cohere_key = os.getenv("COHERE_API_KEY")
+    if cohere_key:
+        try:
+            reranked = CohereReranker().rerank(query, candidates, top_k=top_k)
+        except Exception:
+            reranked = candidates[:top_k]
+    else:
+        reranked = candidates[:top_k]
+
+    all_chunks = _load_all_chunks()
+
+    seen_ids, expanded = set(), []
+    for chunk in _deduplicate(reranked):
+        for neighbour in _expand_context(chunk, all_chunks, window=1):
+            if neighbour["id"] not in seen_ids:
+                n = neighbour.copy()
+                if "cohere_score" in chunk and "cohere_score" not in n:
+                    n["cohere_score"] = chunk["cohere_score"] * 0.9
+                expanded.append(n)
+                seen_ids.add(neighbour["id"])
+
+    expanded   = _deduplicate(expanded)
+    compressed = _compress(expanded, max_tokens=2000)
+    ordered    = _order_by_source(compressed)
+
+    parts = [
+        f"[Source: {c['doc_name']}, Chunk {c['chunk_index']}]\n{c['content']}"
+        for c in ordered
+    ]
+    context = "\n\n---\n\n".join(parts)
+
+    langfuse_context.update_current_observation(metadata={
+        "intent": intent, "candidates": len(candidates),
+        "after_rerank": len(reranked), "after_expand": len(expanded),
+        "after_compress": len(compressed), "cohere_used": bool(cohere_key),
+    })
+    return context, reranked

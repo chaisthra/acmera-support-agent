@@ -47,24 +47,6 @@ app.add_middleware(
 #   1. LiteLLM Redis cache  — per-call cache for all LLM completions (temp=0)
 #   2. Response-level cache — skips the entire agent graph on repeated queries
 
-def _setup_litellm_cache() -> None:
-    """Wire LiteLLM to Redis so all classify/evaluate/respond calls are cached."""
-    host = os.getenv("REDIS_HOST")
-    if not host:
-        print("[cache] REDIS_HOST not set — running without LiteLLM cache")
-        return
-    try:
-        import litellm
-        litellm.cache = litellm.Cache(
-            type="redis",
-            host=host,
-            port=int(os.getenv("REDIS_PORT", 6379)),
-        )
-        print(f"[cache] LiteLLM → Redis {host}:{os.getenv('REDIS_PORT', 6379)}")
-    except Exception as e:
-        print(f"[cache] LiteLLM Redis setup skipped: {e}")
-
-
 def _get_redis():
     """Lazy Redis client for response-level caching. Returns None if unconfigured."""
     host = os.getenv("REDIS_HOST")
@@ -89,9 +71,6 @@ def _cache_key(query: str, mode: str) -> str:
     return f"agent:v1:{digest}"
 
 
-_setup_litellm_cache()
-
-
 # ── Endpoints ────────────────────────────────────────────────────────────────
 
 @app.get("/health")
@@ -105,7 +84,7 @@ class QueryRequest(BaseModel):
 
 
 @app.post("/query")
-def query_endpoint(req: QueryRequest):
+async def query_endpoint(req: QueryRequest):
     """
     Core agent endpoint — programmatic access and curl testing.
     Returns should_escalate, steps_taken, trajectory so the deliverable
@@ -141,7 +120,7 @@ def query_endpoint(req: QueryRequest):
         "elapsed_seconds":  result.get("elapsed_seconds", 0),
         "trace_id":         trace_id,
         "trace_url":        f"{LANGFUSE_HOST}/trace/{trace_id}" if trace_id else None,
-        "cache_hit":        False,
+        "cache_hit":        result.get("cache_hit", False),
     }
 
     if r:
@@ -158,7 +137,7 @@ class AskRequest(BaseModel):
 
 
 @app.post("/api/ask")
-def ask_endpoint(req: AskRequest):
+async def ask_endpoint(req: AskRequest):
     """Web UI endpoint — supports both LangGraph agent and naive pipeline modes."""
     r   = _get_redis() if req.use_cache else None
     key = _cache_key(req.query, req.mode)
@@ -189,7 +168,7 @@ def ask_endpoint(req: AskRequest):
                 "trace_id":         trace_id,
                 "trace_url":        f"{LANGFUSE_HOST}/trace/{trace_id}" if trace_id else None,
                 "mode":             "agent",
-                "cache_hit":        False,
+                "cache_hit":        result.get("cache_hit", False),
             }
         else:
             from support_pipeline import handle_query
@@ -211,7 +190,7 @@ def ask_endpoint(req: AskRequest):
                 "trace_id":         trace_id,
                 "trace_url":        f"{LANGFUSE_HOST}/trace/{trace_id}" if trace_id else None,
                 "mode":             "pipeline",
-                "cache_hit":        False,
+                "cache_hit":        result.get("cache_hit", False),
             }
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
@@ -222,7 +201,7 @@ def ask_endpoint(req: AskRequest):
 
 
 @app.post("/ingest")
-def ingest_endpoint():
+async def ingest_endpoint():
     """Create pgvector schema then embed and store all corpus documents."""
     try:
         # Only creates orders + customers tables — never touches chunks (Project A's corpus)

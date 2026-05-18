@@ -22,6 +22,7 @@ from query_classifier import classify_tool
 from retrieval import embed_query, retrieve_filtered, deduplicate_chunks, assemble_context, retrieve_advanced
 from mock_tools import run_order_tracker, run_account_lookup, run_multi_tool
 from difficulty_classifier import route_model_llm
+from semantic_cache import get_semantic_cache
 
 load_dotenv()
 
@@ -30,21 +31,10 @@ litellm.set_verbose = False
 langfuse = Langfuse()
 
 
-def _init_redis_cache() -> None:
-    host = os.getenv("REDIS_HOST")
-    if not host:
-        return
-    try:
-        litellm.cache = litellm.Cache(
-            type="redis",
-            host=host,
-            port=int(os.getenv("REDIS_PORT", 6379)),
-        )
-    except Exception:
-        pass
-
-
+_init_redis_cache = lambda: None  # LiteLLM Redis cache disabled — use semantic cache instead
 _init_redis_cache()
+
+_response_cache = get_semantic_cache(threshold=0.92, namespace="response", ttl=3600)
 
 PRIMARY_MODEL  = "gpt-4o-mini"
 FALLBACK_MODEL = "gpt-3.5-turbo"
@@ -128,29 +118,126 @@ def generate_response(query: str, context: str, intent: str, model: str = PRIMAR
     return answer
 
 
-@observe(name="support_pipeline")
-def handle_query(query: str, model: str | None = None) -> dict:
-    """Full pipeline: tool-route → difficulty-route → filtered retrieval → mock tool → respond."""
-    start_time = time.time()
-    langfuse_context.update_current_trace(input=query, metadata={"pipeline": "project_b"})
+HANDOFF_MESSAGE = (
+    "I want to give you accurate information, but I don't have enough context "
+    "to answer this confidently. Please contact our support team at "
+    "support@acmera.com for accurate help."
+)
 
-    routing = classify_tool(query)
+
+@observe(name="support_pipeline")
+def handle_query(query: str, model: str | None = None, use_cache: bool = True) -> dict:
+    """Full pipeline: guard → anonymize → tool-route → retrieve → generate → output guard."""
+    import hashlib
+    start_time = time.time()
+
+    # ── Input guardrail ──────────────────────────────────────────────────────
+    from input_guardrail import check_input
+    guard = check_input(query)
+    if not guard["safe"]:
+        langfuse.flush()
+        return {
+            "query": query, "answer": guard["refusal"],
+            "intent": guard["category"], "tool": "none",
+            "reason": guard["refusal"], "context": "",
+            "retrieved_docs": [], "chunks_used": 0, "dupes_removed": 0,
+            "difficulty_score": None, "difficulty_reason": "",
+            "generation_model": "", "trace_id": None,
+            "elapsed_seconds": round(time.time() - start_time, 2),
+            "blocked": True, "block_category": guard["category"],
+            "pii_redacted": False,
+        }
+
+    # ── PII anonymization ────────────────────────────────────────────────────
+    from pii_anonymizer import PiiAnonymizer, redaction_audit_log
+    anonymizer  = PiiAnonymizer()
+    clean_query = anonymizer.anonymize(query)
+    pii_redacted = clean_query != query
+
+    if pii_redacted:
+        redaction_audit_log(
+            trace_id=langfuse_context.get_current_trace_id() or "unknown",
+            pii_types=anonymizer.detected_types,
+            query_hash=hashlib.sha256(query.encode()).hexdigest(),
+            intent=None,
+        )
+
+    langfuse_context.update_current_trace(
+        input=clean_query,
+        metadata={"pipeline": "project_b", "pii_redacted": pii_redacted},
+    )
+
+    # ── Semantic response cache ──────────────────────────────────────────────
+    _query_embedding = embed_query(clean_query)
+    if use_cache:
+        hit = _response_cache.get(_query_embedding)
+        if hit:
+            cached_answer = anonymizer.restore(hit["answer"])
+            langfuse.flush()
+            return {
+                "query": query, "answer": cached_answer,
+                "intent": "cached", "tool": "none",
+                "reason": "semantic cache hit", "context": "",
+                "retrieved_docs": [], "chunks_used": 0, "dupes_removed": 0,
+                "difficulty_score": None, "difficulty_reason": "",
+                "generation_model": "", "trace_id": None,
+                "elapsed_seconds": round(time.time() - start_time, 2),
+                "blocked": False, "pii_redacted": pii_redacted,
+                "has_hallucination": False, "should_escalate": False, "ticket": None,
+                "cache_hit": True, "cache_similarity": hit["cache_similarity"],
+            }
+
+    routing = classify_tool(clean_query)
     intent  = routing["intent"]
     tool    = routing["tool"]
 
-    # Difficulty routing — LLM picks gpt-4o or gpt-4o-mini for generation
     if model is None:
-        model, difficulty_score, difficulty_reason = route_model_llm(query)
+        model, difficulty_score, difficulty_reason = route_model_llm(clean_query)
     else:
         difficulty_score, difficulty_reason = None, "model override"
 
-    context, num_chunks, num_removed, doc_names = retrieve_policy(query, intent, tool)
-    answer = generate_response(query, context, intent, model=model)
+    context, num_chunks, num_removed, doc_names = retrieve_policy(clean_query, intent, tool)
+    answer = generate_response(clean_query, context, intent, model=model)
+
+    # ── Source guardrail (hallucination check) ───────────────────────────────
+    from output_guardrail import check_hallucination
+    hallucination_result = check_hallucination(answer, context)
+    has_hallucination    = hallucination_result.get("has_hallucination", False)
+
+    # ── Output guardrail (PII scan on answer) ────────────────────────────────
+    from output_guardrail import check_output
+    output_check = check_output(answer)
+    if not output_check["safe"]:
+        answer = output_check["redacted"]
+
+    # ── Confidence / escalation ──────────────────────────────────────────────
+    ticket = None
+    should_escalate = has_hallucination
+    if has_hallucination:
+        from support_ticket import generate_ticket
+        try:
+            t = generate_ticket(
+                query=query,
+                ai_response=answer,
+                reason="Hallucination detected — answer not fully grounded in retrieved context",
+            )
+            ticket = t.model_dump()
+        except Exception:
+            pass
+        answer = HANDOFF_MESSAGE
+
+    if use_cache and not should_escalate:
+        _response_cache.set(clean_query, _query_embedding, answer)
+
+    # Restore original PII values in answer
+    answer = anonymizer.restore(answer)
 
     elapsed = round(time.time() - start_time, 2)
     langfuse_context.update_current_trace(output=answer, metadata={
         "intent": intent, "tool": tool, "elapsed": elapsed,
         "difficulty_score": difficulty_score, "generation_model": model,
+        "pii_redacted": pii_redacted, "has_hallucination": has_hallucination,
+        "should_escalate": should_escalate,
     })
     trace_id = langfuse_context.get_current_trace_id()
     langfuse.flush()
@@ -170,6 +257,11 @@ def handle_query(query: str, model: str | None = None) -> dict:
         "answer":             answer,
         "trace_id":           trace_id,
         "elapsed_seconds":    elapsed,
+        "blocked":            False,
+        "pii_redacted":       pii_redacted,
+        "has_hallucination":  has_hallucination,
+        "should_escalate":    should_escalate,
+        "ticket":             ticket,
     }
 
 

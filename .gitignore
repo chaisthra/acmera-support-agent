@@ -6,3 +6,5 @@ __pycache__/
 eval_results.json
 eval_results_project_b.json
 samconfig.toml
+audit.jsonl
+*.jsonl
