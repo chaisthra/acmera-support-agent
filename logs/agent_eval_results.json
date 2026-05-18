@@ -11,9 +11,9 @@
     "expected_source": "01_return_policy.md",
     "retrieved_docs": [],
     "expected_answer": "You can return a laptop within 30 calendar days of delivery (standard), 45 days (Premium Silver), or 60 days (Premium Gold). Items must be in original condition with all accessories. Initiate at returns.acmera.com or by contacting support.",
-    "answer": "To return a laptop, please ensure that it is within our return policy timeframe. Typically, items can be returned within a specified number of days from the date of delivery. Make sure the laptop is in its original condition and packaging. \n\nFor specific instructions on how to initiate the return process, please visit our returns page on the Acmera website or contact customer support with your order ID for further assistance.",
-    "trace_id": "0d620108-8413-42a1-9caf-f43ead1cc1ce",
-    "elapsed_seconds": 5.98,
+    "answer": "To return a laptop, please ensure that it is within the return policy period. Typically, items can be returned within a specified number of days from the date of delivery. Make sure the laptop is in its original condition and packaging. You may need to initiate the return process through your account on our website or contact customer support for further assistance. If you have your order ID, please provide it for more specific help.",
+    "trace_id": "f0c07f2e-5149-42d1-a997-45fe6331c676",
+    "elapsed_seconds": 7.11,
     "steps_taken": 3,
     "tools_called": [
       "order_tracker",
@@ -37,11 +37,11 @@
     "routing_correct": true,
     "faithfulness": {
       "score": 4,
-      "reason": "Most claims about the return policy and condition of the laptop are supported, but the mention of the Acmera website and customer support lacks direct context."
+      "reason": "Most claims about the return policy and process are supported, but the answer lacks specific details about the return policy period mentioned in the context."
     },
     "correctness": {
       "score": 4,
-      "reason": "The generated answer is mostly correct but lacks specific details about the exact return timeframes and the website link."
+      "reason": "The generated answer is mostly correct but lacks specific details about the exact return periods for different membership levels."
     }
   },
   {
@@ -57,20 +57,14 @@
     "retrieved_docs": [],
     "expected_answer": "Track your order through the Acmera app or website under 'My Orders'. You should have received SMS and email updates at each stage. Standard shipping takes 5-7 business days. If marked delivered but not received, file a claim within 7 days.",
     "answer": "I\u2019m sorry, but I cannot track your order without an order ID. Please provide your order ID so I can assist you further.",
-    "trace_id": "d02a4fb9-045c-45d0-98de-6faae115c97f",
-    "elapsed_seconds": 3.9,
-    "steps_taken": 3,
+    "trace_id": "6701e51a-e7f4-4d2b-b788-b7ea18833d52",
+    "elapsed_seconds": 3.69,
+    "steps_taken": 1,
     "tools_called": [
-      "order_tracker",
-      "order_tracker",
       "order_tracker"
     ],
     "trajectory": [
       "classify",
-      "tool_call",
-      "evaluate",
-      "tool_call",
-      "evaluate",
       "tool_call",
       "evaluate",
       "respond"
@@ -82,11 +76,11 @@
     "routing_correct": true,
     "faithfulness": {
       "score": 5,
-      "reason": "The answer accurately reflects the context by stating that an order ID is needed to track the order."
+      "reason": "The answer is fully supported by the context, which states that an order ID is needed to track the order."
     },
     "correctness": {
       "score": 2,
-      "reason": "The generated answer does not address the question about tracking the order and lacks relevant information about the order status and shipping timeframe."
+      "reason": "The generated answer does not address the question about the order's status and lacks relevant information on tracking and shipping."
     }
   },
   {
@@ -97,13 +91,13 @@
     "expected_intent": "billing_or_payment",
     "predicted_intent": "billing_or_payment",
     "expected_escalation": true,
-    "predicted_escalation": false,
+    "predicted_escalation": true,
     "expected_source": "05_payment_methods.md",
     "retrieved_docs": [],
     "expected_answer": "If a payment fails, no amount is deducted. If an amount was debited but the order was not confirmed, an automatic refund is initiated within 24 hours. Contact support with your order number and payment details for investigation.",
-    "answer": "If you were charged twice for the same order, please note that if a payment fails, the order is not placed, and no amount is deducted. In rare cases where an amount is debited but the order is not confirmed, a refund is initiated automatically within 24 hours. The bank processing may take an additional 5-7 business days.\n\nTo resolve this issue, please check your order status and contact our customer support for further assistance.",
-    "trace_id": "db1cd2bd-55e1-4bc0-925f-eba80d1a6999",
-    "elapsed_seconds": 4.71,
+    "answer": "I'm escalating your query to our specialist team for human review.\n\nSituation: I was charged twice for the same order\n\nA support agent will contact you within 2 hours via your registered email.\nReference number: ESC-23305",
+    "trace_id": "75e072eb-7f02-4ba0-9d5c-1d54f22bb12b",
+    "elapsed_seconds": 10.1,
     "steps_taken": 1,
     "tools_called": [
       "policy_kb"
@@ -112,20 +106,20 @@
       "classify",
       "tool_call",
       "evaluate",
-      "respond"
+      "escalate"
     ],
     "difficulty_score": 1,
     "generation_model": "gpt-4o-mini",
     "classification_correct": true,
     "retrieval_hit": null,
-    "routing_correct": false,
+    "routing_correct": true,
     "faithfulness": {
-      "score": 4,
-      "reason": "Most claims are supported by the context, but the answer does not explicitly address the situation of being charged twice for the same order."
+      "score": 1,
+      "reason": "The answer does not address the issue of being charged twice and contains no relevant information from the context."
     },
     "correctness": {
-      "score": 4,
-      "reason": "The generated answer is mostly correct and covers key points, but it omits the specific mention of providing the order number and payment details for investigation."
+      "score": 1,
+      "reason": "The generated answer does not address the issue of being charged twice and lacks relevant information about refunds or contacting support."
     }
   },
   {
@@ -140,21 +134,15 @@
     "expected_source": "02_premium_membership.md",
     "retrieved_docs": [],
     "expected_answer": "Premium Gold requires spending \u20b975,000 in a calendar year, or maintaining Premium Silver status for 3 or more consecutive years.",
-    "answer": "I'm sorry, but I don't have the specific information regarding the spending requirements to reach Premium Gold status. Please check the Acmera website or contact customer support for detailed information on membership tiers and requirements.",
-    "trace_id": "9eb487b5-0b82-4b13-b9eb-7dfa21b2b0a4",
-    "elapsed_seconds": 4.58,
-    "steps_taken": 3,
+    "answer": "I'm sorry, but I don't have the specific details about the spending requirements to reach Premium Gold status. Please check the Acmera website or contact customer support for more information on membership tiers and their requirements.",
+    "trace_id": "4f5b3f7d-a140-4589-bfe6-41608c9d06c7",
+    "elapsed_seconds": 3.81,
+    "steps_taken": 1,
     "tools_called": [
-      "account_lookup",
-      "account_lookup",
       "account_lookup"
     ],
     "trajectory": [
       "classify",
-      "tool_call",
-      "evaluate",
-      "tool_call",
-      "evaluate",
       "tool_call",
       "evaluate",
       "respond"
@@ -166,7 +154,7 @@
     "routing_correct": true,
     "faithfulness": {
       "score": 5,
-      "reason": "The answer accurately states the lack of specific information regarding spending requirements, which is consistent with the context provided."
+      "reason": "The answer accurately reflects the lack of specific information in the context regarding spending requirements for Premium Gold."
     },
     "correctness": {
       "score": 1,
@@ -185,9 +173,9 @@
     "expected_source": "03_shipping_policy.md",
     "retrieved_docs": [],
     "expected_answer": "Report the damage within 48 hours of delivery through the app or by contacting support. Include photos of the damaged product and packaging. Acmera will arrange a free replacement or full refund \u2014 no need to return the damaged item in most cases.",
-    "answer": "I'm sorry to hear that your package arrived damaged. Please report the issue within 48 hours of delivery and provide photographic evidence. Acmera will arrange a replacement or full refund at no additional cost. If you need further assistance, feel free to ask!",
-    "trace_id": "7644fcbf-372b-44c1-9642-c1ef2981adc2",
-    "elapsed_seconds": 4.12,
+    "answer": "I'm sorry to hear that your package arrived damaged. Please report the damage within 48 hours of delivery and include photos of the damaged product and packaging. We will arrange a free replacement or full refund, and you typically won't need to return the damaged item.",
+    "trace_id": "1edccd7b-a17f-4afe-9a9c-33668e2d5aaf",
+    "elapsed_seconds": 12.19,
     "steps_taken": 1,
     "tools_called": [
       "policy_kb"
@@ -205,11 +193,11 @@
     "routing_correct": false,
     "faithfulness": {
       "score": 5,
-      "reason": "Every claim in the answer is explicitly supported by the context regarding reporting damaged packages and the company's policy on replacements and refunds."
+      "reason": "Every claim in the answer is explicitly supported by the context regarding reporting damaged packages and the process for replacements or refunds."
     },
     "correctness": {
       "score": 5,
-      "reason": "The generated answer correctly addresses all key points of the expected answer, including the reporting timeframe, the need for photos, and the resolution options."
+      "reason": "The generated answer fully addresses the question by providing all key points from the expected answer."
     }
   },
   {
@@ -224,9 +212,9 @@
     "expected_source": "02_premium_membership.md",
     "retrieved_docs": [],
     "expected_answer": "Yes. Premium Silver and Gold members may return opened electronics within their extended return window (45 or 60 days), provided the item is in functional condition with all original accessories included.",
-    "answer": "Yes, as a Premium member, you can return an opened laptop as long as it is within the return window and meets the conditions for return. The laptop must be in its original packaging, in unused condition, and include all original accessories, cables, and documentation. Keep in mind that the extended return windows for Premium members apply, but the item must not show signs of wear, damage, or modification.",
-    "trace_id": "78160657-538d-4ab6-bd07-8e0a294057e8",
-    "elapsed_seconds": 7.44,
+    "answer": "Yes, as a Premium member, you can return an opened laptop as long as it is within the standard return window of 30 calendar days from the delivery date. The laptop must be in its original packaging and in unused condition, including all original accessories, cables, and documentation. If the laptop shows signs of wear, damage, or modification, it would not be eligible for return.",
+    "trace_id": "8a50cfd6-9ad8-4f5d-aa15-b90e3b3811e8",
+    "elapsed_seconds": 11.51,
     "steps_taken": 1,
     "tools_called": [
       "policy_kb"
@@ -244,11 +232,11 @@
     "routing_correct": true,
     "faithfulness": {
       "score": 2,
-      "reason": "Most claims in the answer are not supported by the context, as opened items must be in unused condition and the context specifies that items showing signs of wear or damage are not eligible for return."
+      "reason": "Most claims in the answer are not supported by the context, as opened laptops are not eligible for return regardless of membership status."
     },
     "correctness": {
-      "score": 3,
-      "reason": "The generated answer captures the essence of the return policy but incorrectly states that the laptop must be in unused condition and in original packaging, which is not required for opened items."
+      "score": 2,
+      "reason": "The generated answer is mostly incorrect as it states a standard return window of 30 days instead of the extended return window for Premium members."
     }
   },
   {
@@ -263,9 +251,9 @@
     "expected_source": "05_payment_methods.md",
     "retrieved_docs": [],
     "expected_answer": "Acmera accepts credit/debit cards (Visa, Mastercard, Amex, RuPay), UPI (Google Pay, PhonePe, Paytm, BHIM), net banking, Acmera Wallet, EMI on select products, and Cash on Delivery for orders between \u20b9200 and \u20b925,000.",
-    "answer": "Acmera accepts the following payment methods for online purchases:\n\n1. **Credit and Debit Cards**: Visa, Mastercard, American Express, and RuPay (both domestic and international cards).\n2. **UPI**: All major UPI apps, including Google Pay, PhonePe, Paytm, and BHIM.\n3. **Net Banking**: Available for all major Indian banks.\n4. **Acmera Wallet**: A digital wallet that can be used for faster checkout and instant refunds.\n\nAll card transactions are secured with 3D Secure authentication, and UPI payments are processed instantly.",
-    "trace_id": "281d67bb-f0c0-4f44-956e-045c53b60061",
-    "elapsed_seconds": 4.15,
+    "answer": "Acmera accepts the following payment methods for online purchases:\n\n1. **Credit and Debit Cards**: Visa, Mastercard, American Express, and RuPay (both domestic and international cards).\n2. **UPI**: All major UPI apps, including Google Pay, PhonePe, Paytm, and BHIM.\n3. **Net Banking**: Available for all major Indian banks.\n4. **Acmera Wallet**: Customers can load money into their Acmera Wallet for faster checkout.\n5. **EMI Options**: No-cost EMI is available on select products for orders above \u20b95,000 using credit cards from specific banks.\n6. **Cash on Delivery (COD)**: Available for orders between \u20b9200 and \u20b925,000, with a \u20b949 convenience fee. \n\nPlease note that COD is not available for same-day delivery orders or orders to remote pin codes.",
+    "trace_id": "64ef6a96-4d2c-49f0-a83a-f8b7f0e2e036",
+    "elapsed_seconds": 13.83,
     "steps_taken": 1,
     "tools_called": [
       "policy_kb"
@@ -287,7 +275,7 @@
     },
     "correctness": {
       "score": 4,
-      "reason": "The generated answer is mostly correct but omits the details about EMI on select products and Cash on Delivery for specific order amounts."
+      "reason": "The generated answer is mostly correct and covers all key points, but it includes a minor detail about the convenience fee for Cash on Delivery that was not mentioned in the expected answer."
     }
   },
   {
@@ -303,8 +291,8 @@
     "retrieved_docs": [],
     "expected_answer": "Track your order in real time through the Acmera app or website. You will also receive automated email and SMS updates when your order is confirmed, shipped, out for delivery, and delivered.",
     "answer": "To track your shipment, you typically need your order ID. You can enter this ID on our website's order tracking section to get the latest updates on your shipment status. If you don't have your order ID, please check your confirmation email or contact customer support for assistance.",
-    "trace_id": "f7b6345a-a2b5-4f3e-a4af-2dd7223b222f",
-    "elapsed_seconds": 3.86,
+    "trace_id": "a5e0c206-809b-4616-b275-5effe00a0141",
+    "elapsed_seconds": 4.82,
     "steps_taken": 1,
     "tools_called": [
       "order_tracker"
@@ -322,11 +310,11 @@
     "routing_correct": true,
     "faithfulness": {
       "score": 4,
-      "reason": "The answer is mostly supported by the context, as it correctly states the need for an order ID to track a shipment, but it includes additional details about checking a confirmation email and contacting customer support that are not explicitly mentioned in the context."
+      "reason": "The answer provides relevant information about tracking a shipment and the need for an order ID, but it includes a minor detail about checking the confirmation email that is not explicitly supported by the context."
     },
     "correctness": {
       "score": 4,
-      "reason": "The generated answer provides a method to track the shipment but omits the mention of real-time tracking through the app and automated updates."
+      "reason": "The generated answer provides a method to track the shipment but omits the mention of the Acmera app and automated updates."
     }
   },
   {
@@ -341,9 +329,9 @@
     "expected_source": "06_support_faq.md",
     "retrieved_docs": [],
     "expected_answer": "Contact support immediately with your order number and a photo of the item received. Acmera will arrange a pickup of the wrong item and ship the correct one at no extra cost.",
-    "answer": "I'm sorry to hear that you received the wrong item in your order. Please contact our customer support team with your order details, and they will assist you in resolving the issue.",
-    "trace_id": "7e263345-1cb7-41e8-b043-a2a72e3b5b04",
-    "elapsed_seconds": 4.47,
+    "answer": "I'm sorry to hear that you received the wrong item. Please contact our customer support team with your order details, and they will assist you in resolving the issue.",
+    "trace_id": "98acdd67-f7c8-4b3e-afa4-a1c5648853aa",
+    "elapsed_seconds": 4.69,
     "steps_taken": 1,
     "tools_called": [
       "order_tracker"
@@ -361,11 +349,11 @@
     "routing_correct": false,
     "faithfulness": {
       "score": 4,
-      "reason": "The answer acknowledges the issue and provides a relevant solution, but it does not reference any specific details from the context."
+      "reason": "The answer provides a relevant response to the issue of receiving the wrong item, but it lacks specific details from the context regarding order tracking."
     },
     "correctness": {
       "score": 3,
-      "reason": "The generated answer captures the need to contact customer support but lacks specific details about providing the order number, a photo, and the arrangement for pickup and reshipment."
+      "reason": "The generated answer captures the need to contact support but lacks specific details about providing the order number, a photo, and the resolution process."
     }
   },
   {
@@ -381,8 +369,8 @@
     "retrieved_docs": [],
     "expected_answer": "All electronics sold by Acmera include a minimum 1-year manufacturer warranty covering defects in materials and workmanship under normal use. Warranty claims must be initiated through Acmera's support team.",
     "answer": "The standard warranty on electronics sold by Acmera is a minimum of 1 year from the date of purchase. This warranty covers defects in materials and workmanship under normal use conditions.",
-    "trace_id": "96360ff5-fa73-4be1-8b0f-3abc5893c930",
-    "elapsed_seconds": 3.59,
+    "trace_id": "bd0b478f-d129-4695-b24c-9800e4d482d9",
+    "elapsed_seconds": 10.68,
     "steps_taken": 1,
     "tools_called": [
       "policy_kb"
@@ -419,9 +407,9 @@
     "expected_source": "02_premium_membership.md",
     "retrieved_docs": [],
     "expected_answer": "Premium Silver is automatically granted after spending \u20b925,000 in a calendar year or maintaining an active Acmera account for 2 or more years.",
-    "answer": "To become a Premium Silver member at Acmera, you typically need to meet certain criteria, such as making a minimum number of purchases or reaching a specific spending threshold. However, the exact requirements can vary. I recommend checking the membership section on our website or contacting customer support for detailed information on how to upgrade your membership.",
-    "trace_id": "8edc4bb7-2c0a-41ab-a297-8bdd6ce00e28",
-    "elapsed_seconds": 3.62,
+    "answer": "To become a Premium Silver member, you typically need to meet certain criteria set by Acmera, such as making a minimum number of purchases or spending a specific amount within a given timeframe. However, the exact requirements and process may vary. I recommend checking the membership section on the Acmera website or contacting customer support for detailed information on how to achieve Premium Silver membership.",
+    "trace_id": "c2fbf683-2521-4a8a-810b-7f28f91148bf",
+    "elapsed_seconds": 5.06,
     "steps_taken": 1,
     "tools_called": [
       "account_lookup"
@@ -443,7 +431,7 @@
     },
     "correctness": {
       "score": 2,
-      "reason": "The generated answer is mostly incorrect as it does not mention the specific spending amount or the duration of account activity required to achieve Premium Silver status."
+      "reason": "The generated answer is mostly incorrect as it does not specify the exact spending amount or the duration required to achieve Premium Silver membership."
     }
   },
   {
@@ -458,9 +446,9 @@
     "expected_source": "10_account_management.md",
     "retrieved_docs": [],
     "expected_answer": "Suspicious login attempts trigger an automatic account lock. You must verify your identity through your registered email to unlock the account. Contact support immediately if you did not initiate the activity.",
-    "answer": "I'm escalating your query to our specialist team for human review.\n\nSituation: Someone else seems to be logged into my account\n\nA support agent will contact you within 2 hours via your registered email.\nReference number: ESC-53956",
-    "trace_id": "fc89aa23-192b-4272-8c66-ae6496b38e84",
-    "elapsed_seconds": 1.68,
+    "answer": "I'm escalating your query to our specialist team for human review.\n\nSituation: Someone else seems to be logged into my account\n\nA support agent will contact you within 2 hours via your registered email.\nReference number: ESC-55409",
+    "trace_id": "eb89542a-971c-47d4-ab03-d2042c349b60",
+    "elapsed_seconds": 8.7,
     "steps_taken": 1,
     "tools_called": [
       "policy_kb"
@@ -478,11 +466,11 @@
     "routing_correct": true,
     "faithfulness": {
       "score": 5,
-      "reason": "The answer directly addresses the situation of someone else being logged into the account and provides a clear action plan supported by the context regarding account security and support response."
+      "reason": "Every claim in the answer is explicitly supported by the context regarding account security and support escalation."
     },
     "correctness": {
       "score": 2,
-      "reason": "The generated answer does not address the specific steps to verify identity or unlock the account, focusing instead on escalation without providing relevant information."
+      "reason": "The generated answer does not address the key points about account locking, identity verification, or contacting support for unauthorized access."
     }
   },
   {
@@ -497,9 +485,9 @@
     "expected_source": "03_shipping_policy.md",
     "retrieved_docs": [],
     "expected_answer": "Yes. Same-day delivery is available in Bangalore. Orders placed before 12:00 PM are delivered by 9:00 PM the same day. The cost is \u20b9399 for all customers.",
-    "answer": "Yes, Acmera offers same-day delivery in Bangalore for eligible products. Please check the product details on our website to confirm if same-day delivery is available for the item you wish to purchase.",
-    "trace_id": "cad0e889-724f-4052-85a6-facd2991f967",
-    "elapsed_seconds": 3.85,
+    "answer": "Yes, Acmera offers same-day delivery in Bangalore for eligible products. Please check the product details on our website to see if same-day delivery is available for the item you wish to purchase.",
+    "trace_id": "61ee2c8e-f11a-4143-8f64-6127f832cd88",
+    "elapsed_seconds": 3.98,
     "steps_taken": 1,
     "tools_called": [
       "order_tracker"
@@ -520,8 +508,8 @@
       "reason": "The answer contains fabricated information about Acmera offering same-day delivery, which is not supported by the context."
     },
     "correctness": {
-      "score": 4,
-      "reason": "The generated answer is mostly correct but omits specific details about the delivery time and cost."
+      "score": 3,
+      "reason": "The generated answer is partially correct as it confirms same-day delivery but lacks specific details about the cut-off time and cost."
     }
   },
   {
@@ -536,9 +524,9 @@
     "expected_source": "04_warranty_policy.md",
     "retrieved_docs": [],
     "expected_answer": "Extended warranty plans can be purchased at the time of purchase or within 30 days of delivery. If you are still within that window, you can add Acmera Shield (2-year, 8% of product price) or Acmera Shield Plus (3-year with accidental damage, 12% of product price).",
-    "answer": "You can purchase an extended warranty plan within 30 days of delivery. If you are still within that timeframe, you can buy either the Acmera Shield (2-year) or Acmera Shield Plus (3-year) warranty. If it's been more than 30 days since delivery, it would be too late to purchase the extended warranty.",
-    "trace_id": "7b0ee7a3-5f4c-42e3-ac8a-cc18ab5273b0",
-    "elapsed_seconds": 4.58,
+    "answer": "You can purchase an extended warranty plan at the time of purchase or within 30 days of delivery. If you are still within that 30-day window, you can buy the extended warranty. If the 30 days have passed, it would be too late to purchase it.",
+    "trace_id": "c91ab01e-6582-4604-9f1b-b05652db9845",
+    "elapsed_seconds": 10.65,
     "steps_taken": 1,
     "tools_called": [
       "policy_kb"
@@ -556,11 +544,11 @@
     "routing_correct": true,
     "faithfulness": {
       "score": 5,
-      "reason": "Every claim in the answer is explicitly supported by the context regarding the timeframe for purchasing the extended warranty."
+      "reason": "Every claim in the answer is explicitly supported by the context regarding the timing for purchasing an extended warranty."
     },
     "correctness": {
       "score": 5,
-      "reason": "The generated answer accurately reflects the key points of the expected answer, including the time frame for purchasing the warranty and the specific options available."
+      "reason": "The generated answer accurately addresses the question and includes all key points from the expected answer."
     }
   },
   {
@@ -575,9 +563,9 @@
     "expected_source": "06_support_faq.md",
     "retrieved_docs": [],
     "expected_answer": "Card refunds take 5-7 business days after processing and net banking takes 7-10 business days. If the return was received at the warehouse and it has been more than 7 business days since processing, contact support with your return tracking number.",
-    "answer": "I'm escalating your query to our specialist team for human review.\n\nSituation: My refund was supposed to arrive 10 days ago and still hasn't\n\nA support agent will contact you within 2 hours via your registered email.\nReference number: ESC-95291",
-    "trace_id": "bb1d74bd-f780-4db7-aa6c-7f614b809301",
-    "elapsed_seconds": 3.16,
+    "answer": "I'm escalating your query to our specialist team for human review.\n\nSituation: My refund was supposed to arrive 10 days ago and still hasn't\n\nA support agent will contact you within 2 hours via your registered email.\nReference number: ESC-24086",
+    "trace_id": "99c140fe-3059-4ebf-8a38-5d86670d6923",
+    "elapsed_seconds": 3.24,
     "steps_taken": 1,
     "tools_called": [
       "order_tracker"
@@ -614,9 +602,9 @@
     "expected_source": "06_support_faq.md",
     "retrieved_docs": [],
     "expected_answer": "Yes. Items bought during promotional events like flash sales or clearance have a reduced 15-day return window and may carry a 10% restocking fee. Premium members are exempt from both the reduced window and the restocking fee.",
-    "answer": "Yes, sale items purchased during promotional events have a reduced return window of 15 calendar days from delivery, compared to the standard 30 days. However, items marked as \"Final Sale\" are not eligible for return or exchange.",
-    "trace_id": "c814d423-d596-4633-9b34-8a529e7fddd7",
-    "elapsed_seconds": 5.69,
+    "answer": "Yes, items purchased during promotional events have a reduced return window of 15 calendar days from the delivery date, compared to the standard 30 days. Additionally, a 10% restocking fee applies to returns of promotional items. However, Premium members are exempt from the reduced return window and restocking fee.",
+    "trace_id": "6c315c5d-c732-45f3-9243-22e45f2778ea",
+    "elapsed_seconds": 13.82,
     "steps_taken": 1,
     "tools_called": [
       "policy_kb"
@@ -627,18 +615,18 @@
       "evaluate",
       "respond"
     ],
-    "difficulty_score": 2,
+    "difficulty_score": 1,
     "generation_model": "gpt-4o-mini",
     "classification_correct": true,
     "retrieval_hit": null,
     "routing_correct": true,
     "faithfulness": {
       "score": 5,
-      "reason": "Every claim in the answer is explicitly supported by the context."
+      "reason": "Every claim in the answer is explicitly supported by the context regarding the return policy for promotional items."
     },
     "correctness": {
-      "score": 4,
-      "reason": "The generated answer is mostly correct but omits the detail about the 10% restocking fee and the exemption for premium members."
+      "score": 5,
+      "reason": "The generated answer is fully correct and covers all key points of the expected answer."
     }
   },
   {
@@ -653,9 +641,9 @@
     "expected_source": "04_warranty_policy.md",
     "retrieved_docs": [],
     "expected_answer": "A defective product is covered under the 1-year manufacturer warranty regardless of when it was purchased. Initiate a warranty claim through Acmera support with your order number. The team will attempt remote diagnosis; if unresolved, a prepaid label will be sent for repair or replacement.",
-    "answer": "I'm sorry to hear that your laptop has stopped working. Since it was purchased during the Diwali sale, it may still be under warranty. I recommend checking the warranty policy for your laptop and contacting our customer support for assistance with repairs or replacements. If you have your order ID, please provide it for more specific help.",
-    "trace_id": "754b0da1-7e2f-4b46-ab2b-775b3ca90174",
-    "elapsed_seconds": 5.76,
+    "answer": "I'm sorry to hear that your laptop has stopped working. Since it was purchased during the Diwali sale, you may be eligible for a return or exchange depending on our return policy. Please check the warranty details and consider reaching out to our customer support team with your order ID for further assistance. If you need help with anything specific, feel free to ask!",
+    "trace_id": "e4981572-4638-4121-ac29-2b84aecba3a8",
+    "elapsed_seconds": 6.49,
     "steps_taken": 3,
     "tools_called": [
       "order_tracker",
@@ -679,11 +667,11 @@
     "routing_correct": false,
     "faithfulness": {
       "score": 4,
-      "reason": "The answer is mostly supported by the context, as it addresses the issue of the laptop stopping working and suggests checking the warranty, but it lacks specific details about the warranty policy mentioned in the context."
+      "reason": "The answer is mostly supported by the context regarding the return policy and warranty, but it lacks specific details about the Diwali sale or the customer's order ID."
     },
     "correctness": {
       "score": 3,
-      "reason": "The generated answer captures the essence of warranty coverage and suggests contacting support, but it lacks specific details about the warranty claim process and does not mention the remote diagnosis or prepaid label."
+      "reason": "The generated answer captures some key points about contacting customer support and checking warranty details but misses specific information about the manufacturer warranty and the process for initiating a warranty claim."
     }
   },
   {
@@ -698,9 +686,9 @@
     "expected_source": "02_premium_membership.md",
     "retrieved_docs": [],
     "expected_answer": "Premium Gold benefits include: free express shipping on all orders, priority 4-hour order processing, 48-hour early sale access plus a quarterly 15% discount code, 60-day return window, unlimited free return shipping, refunds within 2 business days, instant wallet credit option, a dedicated account manager, and 24/7 direct phone support.",
-    "answer": "Premium Gold members at Acmera enjoy several benefits, including:\n\n1. **Exclusive Discounts**: Access to special discounts on a wide range of products.\n2. **Priority Customer Support**: Faster response times and dedicated support for any inquiries or issues.\n3. **Early Access to Sales**: Get early access to sales events and promotions.\n4. **Free Shipping**: Enjoy free shipping on eligible orders.\n5. **Loyalty Points**: Earn additional loyalty points on purchases, which can be redeemed for future discounts.\n\nThese benefits enhance the shopping experience and provide added value to Premium Gold members.",
-    "trace_id": "a178bd86-1ff0-46c5-ba12-b1c6e657392e",
-    "elapsed_seconds": 4.95,
+    "answer": "Premium Gold members enjoy several benefits, including:\n\n1. **Exclusive Discounts**: Access to special discounts on a wide range of products.\n2. **Priority Customer Support**: Faster response times and dedicated support for any queries or issues.\n3. **Early Access to Sales**: Get early access to sales events and promotions.\n4. **Free Shipping**: Enjoy free shipping on eligible orders.\n5. **Loyalty Points**: Earn more loyalty points on purchases, which can be redeemed for future discounts.\n\nThese benefits enhance the shopping experience and provide added value to Premium Gold members.",
+    "trace_id": "f3f333b7-ea1b-4d46-9117-629720c4694a",
+    "elapsed_seconds": 3.76,
     "steps_taken": 1,
     "tools_called": [
       "account_lookup"
@@ -718,11 +706,11 @@
     "routing_correct": true,
     "faithfulness": {
       "score": 1,
-      "reason": "The answer contains fabricated information about the benefits for Premium Gold members that is not present in the context."
+      "reason": "The answer contains fabricated information not present in the context."
     },
     "correctness": {
       "score": 2,
-      "reason": "The generated answer lists some benefits but misses key points from the expected answer, such as the specific details about order processing, return policies, and refund timelines."
+      "reason": "The generated answer includes some relevant benefits but misses key points such as the specific 4-hour order processing, 60-day return window, and instant wallet credit option."
     }
   },
   {
@@ -737,9 +725,9 @@
     "expected_source": "10_account_management.md",
     "retrieved_docs": [],
     "expected_answer": "Account deletion is permanent and irreversible. All order history, wallet balance, and Premium membership status are lost upon deletion. Wallet balance cannot be withdrawn as cash or transferred before deletion.",
-    "answer": "When you delete your Acmera account, any remaining wallet balance is forfeited. This is part of the policy regarding account deletion. Unfortunately, once the account is deleted, the wallet balance cannot be recovered or transferred.",
-    "trace_id": "b4617bc7-7f9f-48d1-ba56-c5f6c0d4b695",
-    "elapsed_seconds": 3.74,
+    "answer": "When you delete your Acmera account, any remaining wallet balance is forfeited. Unfortunately, once the account is deleted, the wallet balance cannot be recovered or transferred.",
+    "trace_id": "7a93ae75-c468-4e89-b196-94f5f63d3f99",
+    "elapsed_seconds": 11.11,
     "steps_taken": 1,
     "tools_called": [
       "policy_kb"
@@ -757,11 +745,11 @@
     "routing_correct": false,
     "faithfulness": {
       "score": 5,
-      "reason": "Every claim in the answer is explicitly supported by the context regarding account deletion and wallet balance forfeiture."
+      "reason": "Every claim in the answer is explicitly supported by the context."
     },
     "correctness": {
       "score": 5,
-      "reason": "The generated answer accurately reflects the key points of the expected answer regarding the permanence of account deletion and the status of the wallet balance."
+      "reason": "The generated answer accurately reflects the permanence of account deletion and the consequences for the wallet balance, covering all key points of the expected answer."
     }
   },
   {
@@ -776,9 +764,9 @@
     "expected_source": "01_return_policy.md",
     "retrieved_docs": [],
     "expected_answer": "No. Opened software, digital downloads, and gift cards are not returnable under any circumstances.",
-    "answer": "No, gift cards are not returnable under any circumstances.",
-    "trace_id": "c77b95e1-79ed-46d9-a131-83babc73432a",
-    "elapsed_seconds": 5.39,
+    "answer": "No, gift cards are not returnable under any circumstances according to our return policy.",
+    "trace_id": "1f275435-b9f5-4300-a6ab-418fb42bd175",
+    "elapsed_seconds": 12.28,
     "steps_taken": 1,
     "tools_called": [
       "policy_kb"
@@ -796,11 +784,11 @@
     "routing_correct": true,
     "faithfulness": {
       "score": 5,
-      "reason": "The answer is explicitly supported by the context stating that gift cards are not returnable under any circumstances."
+      "reason": "The answer is explicitly supported by the context, which states that gift cards are not returnable under any circumstances."
     },
     "correctness": {
       "score": 5,
-      "reason": "The generated answer is fully correct and matches the expected answer precisely."
+      "reason": "The generated answer is fully correct and matches the expected answer in both content and clarity."
     }
   },
   {
@@ -815,9 +803,9 @@
     "expected_source": "05_payment_methods.md",
     "retrieved_docs": [],
     "expected_answer": "No. Cash on Delivery is only available for orders between \u20b9200 and \u20b925,000. Your order of \u20b930,000 exceeds the COD limit, so you would need to use another payment method such as UPI, card, or net banking.",
-    "answer": "Yes, Cash on Delivery (COD) is available for orders between \u20b9200 and \u20b925,000. Since your order is \u20b930,000, COD is not available for that amount.",
-    "trace_id": "946d29be-cf8e-4f3d-a1ed-1ef57bee525b",
-    "elapsed_seconds": 4.21,
+    "answer": "Yes, Cash on Delivery (COD) is available for orders between \u20b9200 and \u20b925,000. Since your order is \u20b930,000, COD would not be an option for that amount.",
+    "trace_id": "2fcd052a-e9eb-4a5c-baef-b50e37584662",
+    "elapsed_seconds": 10.78,
     "steps_taken": 1,
     "tools_called": [
       "policy_kb"
@@ -835,11 +823,11 @@
     "routing_correct": true,
     "faithfulness": {
       "score": 5,
-      "reason": "The answer accurately states that COD is available for orders between \u20b9200 and \u20b925,000 and correctly concludes that it is not available for a \u20b930,000 order, which is explicitly supported by the context."
+      "reason": "The answer accurately states that COD is available for orders between \u20b9200 and \u20b925,000 and correctly concludes that it is not available for a \u20b930,000 order."
     },
     "correctness": {
-      "score": 4,
-      "reason": "The generated answer correctly states that COD is not available for a \u20b930,000 order but has minor imprecision in the phrasing."
+      "score": 2,
+      "reason": "The generated answer correctly states the COD limit but incorrectly claims that COD is available for the \u20b930,000 order."
     }
   },
   {
@@ -855,8 +843,8 @@
     "retrieved_docs": [],
     "expected_answer": "Address changes are only possible before the order is shipped. Once the package has been handed to the carrier, the delivery address cannot be modified. Contact support \u2014 they may be able to coordinate with the carrier, but this is not guaranteed.",
     "answer": "If your order has already shipped and the address is incorrect, unfortunately, we cannot change the shipping address at this stage. We recommend contacting the shipping carrier directly to see if they can assist with redirecting the package. If you need further assistance, please provide your order ID, and we can help you with the next steps.",
-    "trace_id": "1e5c61cf-8cc1-40fe-af80-783bd4968420",
-    "elapsed_seconds": 4.76,
+    "trace_id": "f5e14abb-12b7-4df5-a640-fea5fdc52842",
+    "elapsed_seconds": 5.58,
     "steps_taken": 3,
     "tools_called": [
       "order_tracker",
@@ -880,7 +868,7 @@
     "routing_correct": false,
     "faithfulness": {
       "score": 4,
-      "reason": "The answer is mostly supported by the context regarding the inability to change the shipping address, but it lacks specific details about the policy on address changes."
+      "reason": "The answer is mostly supported by the context regarding the inability to change the shipping address, but it introduces the need for an order ID which is not explicitly mentioned in the context."
     },
     "correctness": {
       "score": 4,
@@ -899,9 +887,9 @@
     "expected_source": "02_premium_membership.md",
     "retrieved_docs": [],
     "expected_answer": "Refunds for Premium members are processed within 2 business days of the item being received at the warehouse, compared to 5-7 business days for standard customers. Premium Gold members can also request an instant store credit refund upon return shipment tracking confirmation.",
-    "answer": "For Premium members, once a returned item is received and inspected at our warehouse, refunds are processed within 5-7 business days.",
-    "trace_id": "96f2896e-a70c-4745-b806-f1d5a0d43129",
-    "elapsed_seconds": 5.43,
+    "answer": "For Premium members, once a returned item is received and inspected at our warehouse, refunds are processed within 5-7 business days. After processing, if the order was paid with a credit card, it may take an additional 3-5 business days for the refund to appear on the statement.",
+    "trace_id": "7e440002-4847-4c8c-8312-7738b29ff53d",
+    "elapsed_seconds": 15.19,
     "steps_taken": 1,
     "tools_called": [
       "policy_kb"
@@ -923,7 +911,7 @@
     },
     "correctness": {
       "score": 2,
-      "reason": "The generated answer is mostly incorrect as it states a longer processing time and omits details about instant store credit for Premium Gold members."
+      "reason": "The generated answer is mostly incorrect as it states a longer processing time for Premium members and omits details about instant store credit for Premium Gold members."
     }
   },
   {
@@ -938,9 +926,9 @@
     "expected_source": "04_warranty_policy.md",
     "retrieved_docs": [],
     "expected_answer": "Acmera Shield Plus extends total coverage to 4 years and includes accidental damage protection. It costs 12% of the product price and must be purchased at the time of purchase or within 30 days of delivery. It is non-refundable and non-transferable.",
-    "answer": "The Acmera Shield Plus warranty plan is an extended warranty option that extends total coverage to 4 years and includes accidental damage protection. It costs 12% of the product price. This plan can be purchased at the time of purchase or within 30 days of delivery. Please note that extended warranty plans are non-refundable and non-transferable.",
-    "trace_id": "aabeb35c-5d43-4257-8244-bd4268440d93",
-    "elapsed_seconds": 4.38,
+    "answer": "The Acmera Shield Plus warranty plan extends the total coverage of your product to 4 years and includes accidental damage protection. It costs 12% of the product price. This plan can be purchased at the time of purchase or within 30 days of delivery. Please note that extended warranty plans are non-refundable and non-transferable.",
+    "trace_id": "9b91eda3-0b9f-4ceb-8511-8c3a163cf83e",
+    "elapsed_seconds": 12.29,
     "steps_taken": 1,
     "tools_called": [
       "policy_kb"
@@ -977,21 +965,15 @@
     "expected_source": "03_shipping_policy.md",
     "retrieved_docs": [],
     "expected_answer": "File a claim within 7 days of the marked delivery date. Acmera's logistics team will investigate with the carrier. If the package cannot be located, a full refund or replacement will be issued within 10 business days.",
-    "answer": "I'm sorry to hear that you haven't received your package despite it showing as delivered. Please check with your neighbors or around your property to see if it was left in a different location. If you still can't find it, I recommend contacting our customer support team directly for further assistance. They can help you investigate the issue.",
-    "trace_id": "ff6df033-d1de-44a0-84d2-dcb2f5b88e7f",
-    "elapsed_seconds": 4.79,
-    "steps_taken": 3,
+    "answer": "I'm sorry to hear that you haven't received your package despite it showing as delivered. Please check with your neighbors or any other household members to see if they may have received it on your behalf. If you still cannot locate it, I recommend contacting our customer support team directly for further assistance. They can help you investigate the issue.",
+    "trace_id": "953573bb-bfec-48dc-a604-d3d2d45f1b83",
+    "elapsed_seconds": 4.23,
+    "steps_taken": 1,
     "tools_called": [
-      "order_tracker",
-      "order_tracker",
       "order_tracker"
     ],
     "trajectory": [
       "classify",
-      "tool_call",
-      "evaluate",
-      "tool_call",
-      "evaluate",
       "tool_call",
       "evaluate",
       "respond"
@@ -1002,12 +984,12 @@
     "retrieval_hit": null,
     "routing_correct": false,
     "faithfulness": {
-      "score": 2,
-      "reason": "Most claims in the answer, such as checking with neighbors and contacting customer support, are not supported by the context provided."
+      "score": 4,
+      "reason": "The answer provides helpful suggestions and guidance, but it includes minor details not explicitly supported by the context."
     },
     "correctness": {
       "score": 2,
-      "reason": "The generated answer provides some guidance but fails to mention filing a claim or the specific timeframes for investigation and resolution."
+      "reason": "The generated answer provides some guidance but does not mention filing a claim or the specific procedures for investigation and resolution."
     }
   },
   {
@@ -1023,8 +1005,8 @@
     "retrieved_docs": [],
     "expected_answer": "No. Refunds are always issued to the original payment method used for the purchase. The only exception is that Premium Gold members may opt to receive the refund as instant Acmera Wallet credit instead.",
     "answer": "No, refunds are issued to the original payment method only. You cannot get a refund to a different bank account.",
-    "trace_id": "d197176b-b3b7-4af7-8f24-c305e052be48",
-    "elapsed_seconds": 5.19,
+    "trace_id": "1faa07c7-a8df-49d9-bbf2-162d818f1bc5",
+    "elapsed_seconds": 11.27,
     "steps_taken": 1,
     "tools_called": [
       "policy_kb"
@@ -1042,7 +1024,7 @@
     "routing_correct": true,
     "faithfulness": {
       "score": 5,
-      "reason": "The answer is explicitly supported by the context stating that refunds are issued to the original payment method only."
+      "reason": "The answer is explicitly supported by the context, which states that refunds are issued to the original payment method only."
     },
     "correctness": {
       "score": 5,
@@ -1061,9 +1043,9 @@
     "expected_source": "10_account_management.md",
     "retrieved_docs": [],
     "expected_answer": "Account deletion is permanent and irreversible. All order history, wallet balance, and Premium membership status are lost. There is no recovery option once an account is deleted.",
-    "answer": "I'm escalating your query to our specialist team for human review.\n\nSituation: I accidentally deleted my account and lost my Premium Gold status and order history\n\nA support agent will contact you within 2 hours via your registered email.\nReference number: ESC-04860",
-    "trace_id": "5375bb58-1c6e-4a1d-a02c-771b345fbbec",
-    "elapsed_seconds": 5.47,
+    "answer": "I'm escalating your query to our specialist team for human review.\n\nSituation: I accidentally deleted my account and lost my Premium Gold status and order history\n\nA support agent will contact you within 2 hours via your registered email.\nReference number: ESC-59219",
+    "trace_id": "0bd57ddd-59c9-4eab-ab1a-7ac4c30147eb",
+    "elapsed_seconds": 2.13,
     "steps_taken": 1,
     "tools_called": [
       "account_lookup"
@@ -1101,8 +1083,8 @@
     "retrieved_docs": [],
     "expected_answer": "Yes. Premium Silver members get free standard shipping on orders over \u20b9500 with priority processing (orders shipped within 4 hours on business days). Premium Gold members receive free express shipping on all orders regardless of value.",
     "answer": "Yes, Premium members do receive faster shipping options as part of their membership benefits.",
-    "trace_id": "f359d92b-93b6-4586-84d7-a1b06e8e0e68",
-    "elapsed_seconds": 3.27,
+    "trace_id": "f4db6e49-de87-4f59-ae8e-71da73f6e20b",
+    "elapsed_seconds": 3.23,
     "steps_taken": 1,
     "tools_called": [
       "account_lookup"
@@ -1120,11 +1102,11 @@
     "routing_correct": true,
     "faithfulness": {
       "score": 1,
-      "reason": "The answer contains fabricated information as the context does not mention anything about Premium members or shipping benefits."
+      "reason": "The answer contains fabricated information as the context does not provide any details about shipping options for Premium members."
     },
     "correctness": {
       "score": 3,
-      "reason": "The generated answer is partially correct but lacks specific details about the different shipping benefits for Premium Silver and Gold members."
+      "reason": "The generated answer is partially correct as it confirms faster shipping for Premium members but lacks specific details about the different membership tiers and their shipping benefits."
     }
   },
   {
@@ -1139,9 +1121,9 @@
     "expected_source": "13_acmera_wallet.md",
     "retrieved_docs": [],
     "expected_answer": "Promotional wallet credits have a 90-day expiry from the date of issue. Once expired, they cannot be reinstated. Regular wallet balance does not expire as long as the account remains active.",
-    "answer": "Promotional wallet credits have a 90-day expiry from the date of issue. Unfortunately, once they expire, they cannot be used or reinstated. If you have any further questions or need assistance, feel free to ask!",
-    "trace_id": "72a25c60-ab30-40b2-b054-de90c26e510f",
-    "elapsed_seconds": 4.81,
+    "answer": "Promotional wallet credits have a 90-day expiry from the date of issue. Unfortunately, once they expire, they cannot be used. If you have any further questions or need assistance, feel free to ask!",
+    "trace_id": "df5c7083-0724-4445-bc32-34b04acc8136",
+    "elapsed_seconds": 10.86,
     "steps_taken": 1,
     "tools_called": [
       "policy_kb"
@@ -1159,11 +1141,11 @@
     "routing_correct": true,
     "faithfulness": {
       "score": 5,
-      "reason": "Every claim in the answer is explicitly supported by the context regarding the 90-day expiry of promotional wallet credits."
+      "reason": "Every claim in the answer is explicitly supported by the context regarding the expiry of promotional wallet credits."
     },
     "correctness": {
       "score": 5,
-      "reason": "The generated answer accurately reflects the key points of the expected answer regarding the expiry and reinstatement of promotional wallet credits."
+      "reason": "The generated answer correctly states the 90-day expiry of promotional wallet credits and that they cannot be reinstated, addressing all key points of the expected answer."
     }
   },
   {
@@ -1178,9 +1160,9 @@
     "expected_source": "01_return_policy.md",
     "retrieved_docs": [],
     "expected_answer": "No. The holiday extended return window for items bought between November 15 and December 31 closes on January 31. A February return falls outside that window. It would only be eligible if the customer is a Premium Silver member (45-day window from Dec 20 = Feb 3) or Premium Gold (60-day window = Feb 18), and the return date falls within their tier's window.",
-    "answer": "Yes, you can return the phone in February. Items purchased between November 15 and December 31 have an extended return window until January 31 of the following year. Since you bought the phone on December 20, it falls within this holiday season extended return period. Just ensure that all other return conditions are met.",
-    "trace_id": "999e775b-8993-4781-944f-50e8877b423c",
-    "elapsed_seconds": 4.84,
+    "answer": "Yes, you can return the phone in February. Since you purchased the phone during the holiday season (between November 15 and December 31), you benefit from an extended return window until January 31 of the following year. However, since you want to return it in February, it would be outside the extended return window, and thus not eligible for return.",
+    "trace_id": "94fe7592-e2a4-452d-85d1-abac5a36860d",
+    "elapsed_seconds": 11.55,
     "steps_taken": 1,
     "tools_called": [
       "policy_kb"
@@ -1198,11 +1180,11 @@
     "routing_correct": true,
     "faithfulness": {
       "score": 5,
-      "reason": "Every claim in the answer is explicitly supported by the context regarding the extended return window for items purchased during the holiday season."
+      "reason": "Every claim in the answer is explicitly supported by the context regarding the holiday season extended return policy."
     },
     "correctness": {
-      "score": 2,
-      "reason": "The generated answer incorrectly states that the phone can be returned in February, failing to mention the specific return windows for Premium members."
+      "score": 3,
+      "reason": "The generated answer captures the key point about the extended return window but ultimately provides incorrect information regarding the eligibility for a February return."
     }
   },
   {
@@ -1217,9 +1199,9 @@
     "expected_source": "05_payment_methods.md",
     "retrieved_docs": [],
     "expected_answer": "If a payment fails, no amount should be deducted. In rare cases where an amount is debited but the order is not confirmed, a refund is initiated automatically within 24 hours, with bank processing taking an additional 5-7 business days. Contact support with your order number and payment details if the automatic refund does not appear.",
-    "answer": "If your EMI payment failed, the order is not placed, and no amount should be deducted. However, in rare cases where an amount is debited but the order is not confirmed, a refund will be initiated automatically within 24 hours. Please note that bank processing may take an additional 5-7 business days. If you have further concerns, please check with your bank for more details.",
-    "trace_id": "54fc2484-1148-4809-83bc-35f76c81c0b7",
-    "elapsed_seconds": 5.45,
+    "answer": "If your EMI payment failed, the order is not placed, and no amount should be deducted. However, in rare cases where an amount is debited but the order is not confirmed, a refund will be initiated automatically within 24 hours. Please note that bank processing for the refund may take an additional 5-7 business days. If you have any further concerns, please check with your bank or contact our customer support for assistance.",
+    "trace_id": "12afe979-a193-4b58-a67a-6d0187c6309f",
+    "elapsed_seconds": 11.55,
     "steps_taken": 1,
     "tools_called": [
       "policy_kb"
@@ -1237,11 +1219,11 @@
     "routing_correct": false,
     "faithfulness": {
       "score": 5,
-      "reason": "Every claim in the answer is explicitly supported by the context regarding failed payments and the refund process."
+      "reason": "Every claim in the answer is explicitly supported by the context regarding failed payments and refund processes."
     },
     "correctness": {
       "score": 5,
-      "reason": "The generated answer is fully correct and covers all key points of the expected answer."
+      "reason": "The generated answer fully addresses the question and covers all key points of the expected answer."
     }
   },
   {
@@ -1256,9 +1238,9 @@
     "expected_source": "06_support_faq.md",
     "retrieved_docs": [],
     "expected_answer": "Premium benefits are tied to individual accounts and cannot be shared. However, Premium Gold members can add one secondary account holder who receives Premium Silver benefits. Contact your account manager to set this up.",
-    "answer": "No, Premium Gold benefits are non-transferable and cannot be shared with family members.",
-    "trace_id": "2d1a17a9-482a-4cc7-8a73-c39e4bdba761",
-    "elapsed_seconds": 2.8,
+    "answer": "No, Premium Gold benefits cannot be shared with family members. They are exclusive to the account holder.",
+    "trace_id": "db99325b-3cf2-45a6-ae94-6cef0742ce8b",
+    "elapsed_seconds": 3.08,
     "steps_taken": 1,
     "tools_called": [
       "account_lookup"
@@ -1276,7 +1258,7 @@
     "routing_correct": true,
     "faithfulness": {
       "score": 5,
-      "reason": "The answer is explicitly supported by the context stating that Premium Gold benefits are non-transferable."
+      "reason": "The answer is explicitly supported by the context stating that Premium Gold benefits are exclusive to the account holder."
     },
     "correctness": {
       "score": 4,

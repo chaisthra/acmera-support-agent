@@ -28,7 +28,7 @@ from dotenv import load_dotenv
 from langfuse import Langfuse
 from langfuse.decorators import observe, langfuse_context
 from query_classifier import classify_tool
-from retrieval import embed_query, retrieve_filtered, deduplicate_chunks, assemble_context
+from retrieval import embed_query, retrieve_filtered, deduplicate_chunks, assemble_context, retrieve_advanced
 from mock_tools import run_order_tracker, run_account_lookup
 from difficulty_classifier import route_model_llm
 
@@ -81,6 +81,7 @@ class AgentState(TypedDict):
     difficulty_score: int                            # 1-5 from difficulty classifier
     generation_model: str                            # gpt-4o or gpt-4o-mini
     force_escalate:   bool
+    use_cache:        bool                           # False → bypass LiteLLM Redis cache
 
 
 # ---------------------------------------------------------------------------
@@ -111,10 +112,9 @@ def classify_node(state: AgentState) -> dict:
 # ---------------------------------------------------------------------------
 
 def _policy_kb(query: str, intent: str) -> str:
-    emb    = embed_query(query)
-    chunks = retrieve_filtered(emb, intent, top_k=5)
-    unique, _ = deduplicate_chunks(chunks)
-    return assemble_context(unique)
+    """Filtered dense → Cohere rerank → expand → compress → assemble."""
+    context, _ = retrieve_advanced(query, intent)
+    return context
 
 
 ESCALATION_SIGNALS = [
@@ -225,6 +225,7 @@ def evaluate_node(state: AgentState) -> dict:
 
     results_text = "\n\n".join(tool_results) if tool_results else "None"
 
+    cache_opts = {} if state.get("use_cache", True) else {"cache": {"no-cache": True}}
     response = litellm.completion(
         model="gpt-4o-mini",
         temperature=0,
@@ -236,6 +237,7 @@ def evaluate_node(state: AgentState) -> dict:
             steps_taken=steps,
             tool_results=results_text[:2000],
         )}],
+        **cache_opts,
     )
     raw = response.choices[0].message.content.strip()
     raw = raw.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
@@ -278,12 +280,14 @@ def respond_node(state: AgentState) -> dict:
         {"role": "user",   "content": state["query"]},
     ]
 
+    cache_opts = {} if state.get("use_cache", True) else {"cache": {"no-cache": True}}
     response = litellm.completion(
         model=model,
         fallbacks=["gpt-3.5-turbo"],
         temperature=0.1,
         max_tokens=600,
         messages=messages,
+        **cache_opts,
     )
     answer = response.choices[0].message.content
     langfuse_context.update_current_observation(
@@ -345,7 +349,7 @@ agent = graph.compile()
 # ---------------------------------------------------------------------------
 
 @observe(name="langgraph_agent")
-def run_agent(query: str) -> dict:
+def run_agent(query: str, use_cache: bool = True) -> dict:
     """Run the agent and return state + trajectory. Traces to Langfuse."""
     langfuse_context.update_current_trace(input=query, metadata={"pipeline": "project_b_agent"})
     start = time.time()
@@ -362,6 +366,8 @@ def run_agent(query: str) -> dict:
         "next_action":      "",
         "difficulty_score": 0,
         "generation_model": "",
+        "use_cache":        use_cache,
+        "force_escalate":   False,
     }
 
     trajectory  = []

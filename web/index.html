@@ -524,11 +524,133 @@ html, body { height: 100%; font-family: 'Inter', sans-serif; font-size: 14px; co
 .sidebar::-webkit-scrollbar-track { background: transparent; }
 .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-/* ── Responsive ───────────────────────────────── */
-@media (max-width: 640px) {
-  .sidebar { position: absolute; z-index: 10; height: 100%; box-shadow: var(--shadow-lg); }
-  .sidebar.collapsed { box-shadow: none; }
-  .header-title p { display: none; }
+/* ── Sidebar overlay backdrop (mobile) ────────── */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  z-index: 99;
+  backdrop-filter: blur(2px);
+}
+.sidebar-overlay.visible { display: block; }
+
+/* ═══════════════════════════════════════════════
+   RESPONSIVE
+   ─ desktop  : > 1023px  — default layout
+   ─ tablet   : 640–1023px — narrower sidebar, collapsible
+   ─ mobile   : < 640px   — overlay sidebar, compact UI
+═══════════════════════════════════════════════ */
+
+/* ── Tablet (640–1023px) ──────────────────────── */
+@media (max-width: 1023px) {
+  :root { --sidebar-w: 248px; }
+
+  .header-title p { font-size: 11px; }
+  .header-badges  { gap: 6px; }
+  .badge          { font-size: 10px; padding: 3px 8px; }
+
+  .msg-user .bubble { max-width: 75%; }
+  .chat-scroll { padding: 20px 18px; }
+}
+
+/* ── Mobile (< 640px) ─────────────────────────── */
+@media (max-width: 639px) {
+  :root { --sidebar-w: 80vw; --header-h: 56px; }
+
+  /* Sidebar slides in from left as an overlay */
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 100%;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform .25s ease;
+    min-width: var(--sidebar-w);
+    width: var(--sidebar-w);
+    box-shadow: none;
+  }
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: var(--shadow-lg);
+  }
+  /* hide the old collapsed logic on mobile */
+  .sidebar.collapsed {
+    width: var(--sidebar-w);
+    min-width: var(--sidebar-w);
+    transform: translateX(-100%);
+  }
+
+  /* ── Header ── */
+  .header { padding: 0 14px; gap: 10px; height: var(--header-h); }
+  .header-title h1 { font-size: 14px; }
+  .header-title p  { display: none; }
+  /* hide model + cache badges — they're in sidebar */
+  #model-badge, #cache-badge { display: none; }
+  .badge { font-size: 10px; padding: 3px 8px; }
+
+  /* ── Chat area ── */
+  .chat-scroll { padding: 14px 12px; }
+
+  /* ── Welcome ── */
+  .welcome { min-height: 45vh; padding: 16px 0; }
+  .welcome-icon { width: 56px; height: 56px; font-size: 26px; border-radius: 16px; margin-bottom: 14px; }
+  .welcome h2 { font-size: 18px; }
+  .welcome p  { font-size: 13px; margin-bottom: 20px; }
+
+  /* Suggestions: stack vertically, full-width */
+  .suggestions { flex-direction: column; align-items: stretch; max-width: 100%; }
+  .sug-btn { text-align: left; border-radius: 12px; padding: 10px 14px; }
+
+  /* ── Messages ── */
+  .msg-user .bubble { max-width: 88%; font-size: 13px; }
+  .ai-card { padding: 14px 16px; }
+  .ai-card p, .ai-card li { font-size: 13px; }
+
+  /* ── Metrics bar: wrap tightly ── */
+  .metrics-bar { gap: 8px; padding-top: 8px; }
+  .metric-pill { font-size: 10px; }
+  .intent-chip { font-size: 10px; }
+  .trace-link  { font-size: 10px; }
+
+  /* ── Trajectory: horizontal scroll ── */
+  .trajectory-section { padding: 8px 10px; }
+  .trajectory-nodes {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .trajectory-nodes::-webkit-scrollbar { display: none; }
+  .traj-node { font-size: 10px; padding: 3px 8px; flex-shrink: 0; }
+  .traj-arrow { font-size: 10px; }
+  .tool-chip  { font-size: 10px; padding: 2px 8px; }
+
+  /* ── Escalation card ── */
+  .esc-header { padding: 10px 12px; }
+  .esc-header-title { font-size: 12px; }
+  .esc-header-sub   { font-size: 10px; }
+  .esc-body { padding: 12px 14px; }
+  .esc-badges { flex-wrap: wrap; gap: 6px; }
+
+  /* ── Input area ── */
+  .input-area { padding: 10px 12px 14px; }
+  .input-hint { display: none; }
+  .input-box  { padding: 10px 12px; }
+  #query-input { font-size: 15px; } /* 15px prevents iOS zoom on focus */
+  .send-btn { width: 42px; height: 42px; border-radius: 12px; }
+
+  /* ── Blobs: smaller on mobile ── */
+  .blob-1 { width: 400px; height: 400px; }
+  .blob-2 { width: 300px; height: 300px; }
+  .blob-3 { width: 180px; height: 180px; }
+}
+
+/* ── Very small phones (< 380px) ─────────────── */
+@media (max-width: 379px) {
+  .welcome h2 { font-size: 16px; }
+  .msg-user .bubble { max-width: 94%; }
 }
 </style>
 </head>
@@ -541,6 +663,9 @@ html, body { height: 100%; font-family: 'Inter', sans-serif; font-size: 14px; co
 </div>
 
 <div class="layout">
+
+  <!-- Backdrop (mobile sidebar overlay) -->
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
   <!-- ── Sidebar ── -->
   <aside class="sidebar" id="sidebar">
@@ -589,6 +714,10 @@ html, body { height: 100%; font-family: 'Inter', sans-serif; font-size: 14px; co
           <span>Show Trajectory</span>
           <button class="toggle on" id="trajectory-toggle"></button>
         </div>
+        <div class="toggle-row">
+          <span>Semantic Cache</span>
+          <button class="toggle on" id="cache-toggle"></button>
+        </div>
       </div>
 
     </div>
@@ -607,6 +736,7 @@ html, body { height: 100%; font-family: 'Inter', sans-serif; font-size: 14px; co
       <div class="header-badges">
         <span class="badge badge-agent" id="mode-badge">🤖 Agent</span>
         <span class="badge badge-model" id="model-badge">⚡ Auto</span>
+        <span class="badge" id="cache-badge" style="background:#fef3c7;color:#92400e">⚡ Cache ON</span>
       </div>
     </header>
 
@@ -650,6 +780,7 @@ html, body { height: 100%; font-family: 'Inter', sans-serif; font-size: 14px; co
 let currentMode      = 'agent';
 let currentModel     = 'auto';
 let showTrajectory   = true;
+let useCache         = true;
 let loading          = false;
 
 const modeLabels  = { agent: '🤖 Agent', pipeline: '🔀 Pipeline' };
@@ -665,9 +796,48 @@ const nodeIcons = {
   generate:  '✍️',
 };
 
-// ── Sidebar toggle ─────────────────────────────
-document.getElementById('toggle-btn').addEventListener('click', () => {
-  document.getElementById('sidebar').classList.toggle('collapsed');
+// ── Sidebar helpers ────────────────────────────
+const sidebar = document.getElementById('sidebar');
+const overlay = document.getElementById('sidebar-overlay');
+
+function isMobile() { return window.innerWidth < 640; }
+
+function openSidebar() {
+  if (isMobile()) {
+    sidebar.classList.add('open');
+    sidebar.classList.remove('collapsed');
+    overlay.classList.add('visible');
+  } else {
+    sidebar.classList.remove('collapsed');
+  }
+}
+
+function closeSidebar() {
+  if (isMobile()) {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('visible');
+  } else {
+    sidebar.classList.add('collapsed');
+  }
+}
+
+function toggleSidebar() {
+  if (isMobile()) {
+    sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
+  } else {
+    sidebar.classList.contains('collapsed') ? openSidebar() : closeSidebar();
+  }
+}
+
+// Init: collapse sidebar on mobile by default
+if (isMobile()) closeSidebar();
+
+document.getElementById('toggle-btn').addEventListener('click', toggleSidebar);
+overlay.addEventListener('click', closeSidebar);
+
+// Close sidebar on mobile when a suggestion is tapped
+document.querySelectorAll('.sug-btn').forEach(btn => {
+  btn.addEventListener('click', () => { if (isMobile()) closeSidebar(); });
 });
 
 // ── Mode selection ─────────────────────────────
@@ -709,6 +879,15 @@ document.getElementById('trajectory-toggle').addEventListener('click', function(
   showTrajectory = this.classList.contains('on');
 });
 
+document.getElementById('cache-toggle').addEventListener('click', function() {
+  this.classList.toggle('on');
+  useCache = this.classList.contains('on');
+  const badge = document.getElementById('cache-badge');
+  badge.textContent = useCache ? '⚡ Cache ON' : '🚫 Cache OFF';
+  badge.style.background = useCache ? '#fef3c7' : '#fef2f2';
+  badge.style.color       = useCache ? '#92400e' : '#991b1b';
+});
+
 // ── Auto-resize textarea ───────────────────────
 const input = document.getElementById('query-input');
 input.addEventListener('input', () => {
@@ -737,6 +916,8 @@ async function sendQuery() {
   input.value = '';
   input.style.height = 'auto';
 
+  if (isMobile()) closeSidebar();
+
   const welcome = document.getElementById('welcome');
   if (welcome) welcome.style.display = 'none';
 
@@ -751,6 +932,7 @@ async function sendQuery() {
       mode:             currentMode,
       model_override:   currentModel === 'auto' ? null : currentModel,
       show_trajectory:  showTrajectory,
+      use_cache:        useCache,
     };
     const res = await fetch('/api/ask', {
       method: 'POST',

@@ -174,6 +174,9 @@ def run_eval(category_filter: str | None = None) -> list:
     Routing on should-escalate cases = 0% (Week 4 target to improve).
     """
     from support_pipeline import handle_query
+    # _init_redis_cache() fires on import; disable it — eval is synchronous,
+    # there is no running event loop, and async_set_cache raises RuntimeError.
+    litellm.cache = None
 
     dataset = load_golden_dataset(category_filter)
     if not dataset:
@@ -312,6 +315,8 @@ def run_agent_eval(category_filter: str | None = None) -> list:
     - retrieval_hit is None (doc names not surfaced at agent level)
     """
     from agent import run_agent
+    # same as run_eval — kill the async Redis cache before any completions fire
+    litellm.cache = None
 
     dataset = load_golden_dataset(category_filter)
     if not dataset:

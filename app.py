@@ -100,7 +100,8 @@ def health():
 
 
 class QueryRequest(BaseModel):
-    query: str
+    query:     str
+    use_cache: bool = True
 
 
 @app.post("/query")
@@ -110,7 +111,7 @@ def query_endpoint(req: QueryRequest):
     Returns should_escalate, steps_taken, trajectory so the deliverable
     curl command can verify routing behaviour.
     """
-    r   = _get_redis()
+    r   = _get_redis() if req.use_cache else None
     key = _cache_key(req.query, "agent")
 
     if r:
@@ -122,7 +123,7 @@ def query_endpoint(req: QueryRequest):
 
     try:
         from agent import run_agent
-        result = run_agent(req.query)
+        result = run_agent(req.query, use_cache=req.use_cache)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
@@ -153,12 +154,13 @@ class AskRequest(BaseModel):
     mode:            str = "agent"       # "agent" | "pipeline"
     model_override:  str | None = None   # None = auto | "gpt-4o-mini" | "gpt-4o"
     show_trajectory: bool = True
+    use_cache:       bool = True
 
 
 @app.post("/api/ask")
 def ask_endpoint(req: AskRequest):
     """Web UI endpoint — supports both LangGraph agent and naive pipeline modes."""
-    r   = _get_redis()
+    r   = _get_redis() if req.use_cache else None
     key = _cache_key(req.query, req.mode)
 
     if r:
@@ -171,7 +173,7 @@ def ask_endpoint(req: AskRequest):
     try:
         if req.mode == "agent":
             from agent import run_agent
-            result   = run_agent(req.query)
+            result   = run_agent(req.query, use_cache=req.use_cache)
             trace_id = result.get("trace_id")
             response = {
                 "query":            req.query,
@@ -223,11 +225,12 @@ def ask_endpoint(req: AskRequest):
 def ingest_endpoint():
     """Create pgvector schema then embed and store all corpus documents."""
     try:
-        from setup_db import setup
-        setup()
-        from ingest import ingest
-        ingest()
-        return {"status": "done"}
+        # Only creates orders + customers tables — never touches chunks (Project A's corpus)
+        from setup_db import setup_mock_tables
+        setup_mock_tables()
+        from seed_mock_data import seed
+        seed()
+        return {"status": "done", "note": "mock tables seeded; corpus lives in Project A RDS"}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 

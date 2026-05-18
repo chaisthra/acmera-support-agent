@@ -19,7 +19,7 @@ from langfuse.decorators import observe, langfuse_context
 from dotenv import load_dotenv
 
 from query_classifier import classify_tool
-from retrieval import embed_query, retrieve_filtered, deduplicate_chunks, assemble_context
+from retrieval import embed_query, retrieve_filtered, deduplicate_chunks, assemble_context, retrieve_advanced
 from mock_tools import run_order_tracker, run_account_lookup, run_multi_tool
 from difficulty_classifier import route_model_llm
 
@@ -88,15 +88,12 @@ def _llm(messages: list, model: str = PRIMARY_MODEL, temperature: float = 0.1) -
 @observe(name="retrieve_policy")
 def retrieve_policy(query: str, intent: str, tool: str) -> tuple[str, int, int, list[str]]:
     """
-    Filtered retrieval → deduplication → mock tool injection → context assembly.
+    Advanced retrieval → Cohere rerank → expand → compress → mock tool injection.
     Returns (context, chunks_used, dupes_removed, retrieved_doc_names).
     """
-    query_embedding = embed_query(query)
-    chunks = retrieve_filtered(query_embedding, intent, top_k=5)
-    unique_chunks, removed_log = deduplicate_chunks(chunks)
+    rag_context, reranked = retrieve_advanced(query, intent)
 
-    doc_names = [c["doc_name"] for c in unique_chunks]
-    rag_context = assemble_context(unique_chunks)
+    doc_names = list(dict.fromkeys(c["doc_name"] for c in reranked))  # ordered unique
 
     tool_output = _run_tool(query, tool)
     context = (tool_output + "\n\n---\n\n" + rag_context) if tool_output else rag_context
@@ -104,12 +101,11 @@ def retrieve_policy(query: str, intent: str, tool: str) -> tuple[str, int, int, 
     langfuse_context.update_current_observation(metadata={
         "intent": intent,
         "tool": tool,
-        "chunks_retrieved": len(chunks),
-        "chunks_after_dedup": len(unique_chunks),
-        "duplicates_removed": len(removed_log),
+        "chunks_after_rerank": len(reranked),
         "tool_injected": bool(tool_output),
+        "cohere_used": any("cohere_score" in c for c in reranked),
     })
-    return context, len(unique_chunks), len(removed_log), doc_names
+    return context, len(reranked), 0, doc_names
 
 
 @observe(name="generate_response")

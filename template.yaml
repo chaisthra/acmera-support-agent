@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Acmera Support Agent — ECS Fargate + RDS pgvector + ElastiCache Redis + ALB
+Description: Acmera Support Agent — ECS Fargate + ElastiCache Redis + ALB (shares Project A RDS)
 
 # ── Parameters ──────────────────────────────────────────────────────────────
 Parameters:
@@ -9,25 +9,27 @@ Parameters:
     Default: dev
     AllowedValues: [dev, prod]
 
-  DBPassword:
+  DBHost:
     Type: String
-    NoEcho: true
+    Description: Project A RDS endpoint — shared corpus (acmera_kb, pgvector)
 
-  OpenAIApiKey:
+  DBPort:
     Type: String
-    NoEcho: true
-
-  LangfusePublicKey:
-    Type: String
-    NoEcho: true
-
-  LangfuseSecretKey:
-    Type: String
-    NoEcho: true
+    Default: "5432"
+    Description: Project A RDS port (default 5432)
 
   LangfuseHost:
     Type: String
     Default: https://cloud.langfuse.com
+
+  # ARNs of Project A's existing Secrets Manager secrets — shared, not duplicated
+  ProjectADBSecretArn:
+    Type: String
+    Description: ARN of Project A's acmera/dev/db secret (contains db password)
+
+  ProjectAAppSecretArn:
+    Type: String
+    Description: ARN of Project A's acmera/dev/app secret (contains OpenAI, Langfuse, Cohere keys)
 
 # ── VPC + Networking ─────────────────────────────────────────────────────────
 Resources:
@@ -134,17 +136,6 @@ Resources:
           ToPort: 8080
           SourceSecurityGroupId: !Ref ALBSecurityGroup
 
-  RDSSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: RDS - allow Postgres/5434 from ECS tasks only
-      VpcId: !Ref VPC
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 5434           # Project B RDS runs on 5434
-          ToPort: 5434
-          SourceSecurityGroupId: !Ref ECSSecurityGroup
-
   CacheSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -157,50 +148,9 @@ Resources:
           SourceSecurityGroupId: !Ref ECSSecurityGroup
 
 # ── Secrets Manager ──────────────────────────────────────────────────────────
-
-  DBSecret:
-    Type: AWS::SecretsManager::Secret
-    Properties:
-      Name: !Sub "acmera-support/${Environment}/db"
-      SecretString: !Sub |
-        {"username":"workshop","password":"${DBPassword}","dbname":"acmera_kb"}
-
-  AppSecret:
-    Type: AWS::SecretsManager::Secret
-    Properties:
-      Name: !Sub "acmera-support/${Environment}/app"
-      SecretString: !Sub |
-        {"openai_api_key":"${OpenAIApiKey}","langfuse_public_key":"${LangfusePublicKey}","langfuse_secret_key":"${LangfuseSecretKey}"}
-
-# ── RDS (PostgreSQL + pgvector) ──────────────────────────────────────────────
-
-  DBSubnetGroup:
-    Type: AWS::RDS::DBSubnetGroup
-    Properties:
-      DBSubnetGroupDescription: Acmera Support RDS subnet group
-      SubnetIds:
-        - !Ref PrivateSubnetA
-        - !Ref PrivateSubnetB
-
-  DBInstance:
-    Type: AWS::RDS::DBInstance
-    DeletionPolicy: Snapshot
-    Properties:
-      DBInstanceIdentifier: !Sub "acmera-support-${Environment}"
-      DBInstanceClass: db.t3.micro
-      Engine: postgres
-      EngineVersion: "16.6"
-      MasterUsername: workshop
-      MasterUserPassword: !Ref DBPassword
-      DBName: acmera_kb
-      AllocatedStorage: "20"
-      StorageType: gp2
-      Port: "5434"                 # non-standard port — distinguishes from Project A (5432)
-      VPCSecurityGroups: [!Ref RDSSecurityGroup]
-      DBSubnetGroupName: !Ref DBSubnetGroup
-      MultiAZ: false
-      PubliclyAccessible: true
-      BackupRetentionPeriod: 1
+# Project B reuses Project A's secrets — no duplicate secrets created.
+# ProjectADBSecretArn  → password for the shared RDS
+# ProjectAAppSecretArn → OpenAI, Langfuse, Cohere keys (identical in both projects)
 
 # ── ElastiCache Redis ────────────────────────────────────────────────────────
 
@@ -245,8 +195,8 @@ Resources:
               - Effect: Allow
                 Action: secretsmanager:GetSecretValue
                 Resource:
-                  - !Ref DBSecret
-                  - !Ref AppSecret
+                  - !Ref ProjectADBSecretArn
+                  - !Ref ProjectAAppSecretArn
 
   TaskRole:
     Type: AWS::IAM::Role
@@ -290,9 +240,9 @@ Resources:
             - ContainerPort: 8080
           Environment:
             - Name: PG_HOST
-              Value: !GetAtt DBInstance.Endpoint.Address
+              Value: !Ref DBHost   # Project A RDS — shared corpus
             - Name: PG_PORT
-              Value: "5434"        # matches RDS non-standard port
+              Value: !Ref DBPort
             - Name: PG_USER
               Value: workshop
             - Name: PG_DATABASE
@@ -300,18 +250,20 @@ Resources:
             - Name: LANGFUSE_HOST
               Value: !Ref LangfuseHost
             - Name: REDIS_HOST
-              Value: !GetAtt RedisCluster.RedisEndpoint.Address
+              Value: !Sub "${RedisCluster.RedisEndpoint.Address}"
             - Name: REDIS_PORT
-              Value: !GetAtt RedisCluster.RedisEndpoint.Port
+              Value: !Sub "${RedisCluster.RedisEndpoint.Port}"
           Secrets:
             - Name: PG_PASSWORD
-              ValueFrom: !Sub "${DBSecret}:password::"
+              ValueFrom: !Sub "${ProjectADBSecretArn}:password::"
             - Name: OPENAI_API_KEY
-              ValueFrom: !Sub "${AppSecret}:openai_api_key::"
+              ValueFrom: !Sub "${ProjectAAppSecretArn}:openai_api_key::"
             - Name: LANGFUSE_PUBLIC_KEY
-              ValueFrom: !Sub "${AppSecret}:langfuse_public_key::"
+              ValueFrom: !Sub "${ProjectAAppSecretArn}:langfuse_public_key::"
             - Name: LANGFUSE_SECRET_KEY
-              ValueFrom: !Sub "${AppSecret}:langfuse_secret_key::"
+              ValueFrom: !Sub "${ProjectAAppSecretArn}:langfuse_secret_key::"
+            - Name: COHERE_API_KEY
+              ValueFrom: !Sub "${ProjectAAppSecretArn}:cohere_api_key::"
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -378,6 +330,9 @@ Resources:
         - !Ref PublicSubnetA
         - !Ref PublicSubnetB
       SecurityGroups: [!Ref ALBSecurityGroup]
+      LoadBalancerAttributes:
+        - Key: idle_timeout.timeout_seconds
+          Value: "180"
 
   ALBTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -406,12 +361,12 @@ Resources:
 
 Outputs:
   APIEndpoint:
-    Description: ALB DNS — curl /health, /query, /ingest
+    Description: ALB DNS — curl /health, /query, /ingest (no ingest needed; corpus already in Project A RDS)
     Value: !Sub "http://${ALB.DNSName}"
 
   DBEndpoint:
-    Description: RDS endpoint (port 5434) — needed for setup_db + ingest
-    Value: !GetAtt DBInstance.Endpoint.Address
+    Description: Project A RDS endpoint in use (shared corpus)
+    Value: !Ref DBHost
 
   RedisEndpoint:
     Description: ElastiCache Redis endpoint — wired via REDIS_HOST env var

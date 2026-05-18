@@ -9,3 +9,4 @@ rich
 fastapi>=0.110.0
 uvicorn>=0.29.0
 redis>=5.0.0
+cohere>=5.0.0
