@@ -5,3 +5,4 @@ __pycache__/
 .DS_Store
 eval_results.json
 eval_results_project_b.json
+samconfig.toml
