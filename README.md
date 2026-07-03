@@ -1,4 +1,3 @@
-```markdown
 # Acmera Support Agent — LangGraph E-commerce Support Agent
 
 A 5-node LangGraph agent for e-commerce customer support. Routes queries across intent classification, tool execution, escalation detection, and structured ticket generation.
@@ -162,4 +161,3 @@ project-b/
 ## Corpus
 
 19 markdown documents covering returns, payments, membership tiers, warranty, shipping, promotions, electronics catalog, sustainability, corporate gifting, and support FAQs. Same corpus as the RAG system.
-```
